@@ -175,7 +175,7 @@ class Network:
 
         # first part: expand
         if self.max_expansions > 0:
-            self.expand(0.1)
+            self.expand(1.)
             self.max_expansions -= 1
             print(f'remaining expansions: {self.max_expansions}')
 
@@ -277,8 +277,8 @@ class Network:
         return desc
 
 if __name__ == '__main__':
-    np.random.seed(120)
-    A = Network.Random(10,.5,1.)
+    np.random.seed(121)
+    A = Network.Random(50,.50,1.)
     A.init_positions(dim=3)
     A.print_distanceM(target=True)
     # A.MDE(Nsteps=100)
