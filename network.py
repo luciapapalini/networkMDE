@@ -11,23 +11,22 @@ class Node:
 
     def __init__(self, n):
         self.n = int(n)
-        self.childs = []
-        self.distances = []
+        self.childs = {}
+        self.distances = {}
         self.position = None
 
         # add a list of lines connected for display purposes
         self.lines = {}
+        self.synapsis = {}
 
         # the value of... something, I guess?
         self.value = None
 
     def connect(self, child, distance):
-        # connections are called one time for couple
-        self.childs.append(child)
-        child.childs.append(self)
 
-        self.distances.append(distance)
-        child.distances.append(distance)
+        # connections are called one time for couple
+        self.childs[child] = distance
+        child.childs[self] = distance
 
     def current_dist_from(self, child):
         return np.sqrt(np.sum((self.position - child.position)**2))
@@ -35,7 +34,7 @@ class Node:
     def get_pulled_by_childs(self, epsilon):
 
         delta = np.zeros(self.position.shape)
-        for child, target_dist in zip(self.childs, self.distances):
+        for child, target_dist in self.childs.items():
             real_dist = self.current_dist_from(child)
             delta += (1. - target_dist/real_dist)*(child.position - self.position)
 
@@ -47,7 +46,7 @@ class Node:
 
     def __str__(self):
         desc = f'node {self.n}: \n'
-        for child, dist in zip(self.childs, self.distances):
+        for child, dist in self.childs.items():
             desc += f'\tchild {child.n} at distance {dist}\n'
         return desc
 
@@ -63,7 +62,7 @@ class Network:
         # at the end of each constructor
         # M stands for matrix, SM stands for sparse
         self.targetM = None
-        self.distanceM = None
+        self._distanceM = None
         self.linkM = None
         self.targetSM = None
         self.distanceSM = None
@@ -100,15 +99,13 @@ class Network:
             net.nodes[i] = node_in  # put back
             net.nodes[j] = node_out # put back
 
-            print(f'>> linked {i} to {j}')
+            print(f'>> linked {i} to {j}', end='\r')
 
             net.linkM[i,j] = True
             net.linkM[j,i] = True
 
             net.targetM[i,j] = distance
             net.targetM[j,i] = distance
-
-        net.colors = np.array([node.n for node in net.nodes.values()], dtype=np.float32)
 
         return net
 
@@ -155,6 +152,13 @@ class Network:
         for node in self.nodes.values():
             node.position = np.random.uniform(np.zeros((dim)), np.ones((dim)))
 
+    def set_value(self, node, value):
+        self.nodes[node].value = value
+
+    @property
+    def colors(self):
+        return [node.value for node in self.nodes.values()]
+
     def expand(self, epsilon):
         '''pushes all nodes away from all nodes,
         so basically maximizes the distance of everything from everything'''
@@ -167,22 +171,22 @@ class Network:
             delta *= epsilon
             node.position += delta/self.N
 
-    def MDE(self, Nsteps=10):
+    def MDE(self, Nsteps=10, verbose=True):
         '''Minimal distortion embedding'''
 
         # takes one node at a time and makes it get pulled/pushed by its childs
         # but this does not guarantee that two unconnected nodes
 
-        # first part: expand
-        if self.max_expansions > 0:
-            self.expand(1.)
-            self.max_expansions -= 1
-            print(f'remaining expansions: {self.max_expansions}')
-
-        # second part: relax completely
         for iteration in range(Nsteps):
+            if self.max_expansions > 0:
+                self.expand(1.)
+                self.max_expansions -= 1
+
             for node in self.nodes.values():
                 node.get_pulled_by_childs(0.1)
+
+            if verbose: print(f'>> distortion: {self.get_distortion():.2f}', end='\r')
+
 
         # ending: subtracts position of center of mass
         Xcm = np.zeros(self.repr_dim)
@@ -192,18 +196,16 @@ class Network:
         for node in self.nodes.values():
             node.position -= Xcm
 
-        self.get_distanceM()
-        print(f'D = {self.get_distortion()}')
-
     def to_scatter(self):
         return np.array([node.position for node in self.nodes.values()]).transpose()
 
-    def get_distanceM(self):
-        self.distanceM = np.zeros((self.N,self.N))
+    @property
+    def distanceM(self):
+        self._distanceM = np.zeros((self.N,self.N))
         for node in self.nodes.values():
             for another_node in self.nodes.values():
-                self.distanceM[node.n, another_node.n] = np.sqrt(np.sum( (node.position - another_node.position)**2 ))
-        return self.distanceM
+                self._distanceM[node.n, another_node.n] = np.sqrt(np.sum( (node.position - another_node.position)**2 ))
+        return self._distanceM
 
     def get_distanceSM(self):
         nlinks = np.sum(self.linkM.astype(np.int))
@@ -219,7 +221,7 @@ class Network:
         return np.sum(((self.targetM - self.distanceM)*self.linkM.astype(np.float64))**2)
 
     def print_distanceM(self, target=False):
-        M = self.get_distanceM()
+        M = self.distanceM
         M = self.targetM if target else M
         title = 'Target matrix' if target else 'Current matrix '
         print(title + (30 -len(title))*'-' + f'(D = {A.get_distortion():.1e})')
@@ -278,7 +280,7 @@ class Network:
 
 if __name__ == '__main__':
     np.random.seed(121)
-    A = Network.Random(50,.50,1.)
+    A = Network.Random(10,.9,1.)
     A.init_positions(dim=3)
     A.print_distanceM(target=True)
     # A.MDE(Nsteps=100)
@@ -290,6 +292,6 @@ if __name__ == '__main__':
 
     # netplot.plot(A,ax)
     animation = netplot.animate_MDE(A,fig,ax,frames=120, interval=75, blit=False)
-    # animation.save('random.mp4',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}'), dpi=200)
+    # animation.save('random.mp4',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}: D = {A.get_distortion():.2f} (remaining expansions: {A.max_expansions})', end='\r'), dpi=200)
     netplot.plot_links(A)
     plt.show()
