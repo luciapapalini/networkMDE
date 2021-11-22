@@ -15,16 +15,24 @@ class Node:
         self.childs = {}
         self.distances = {}
         self.position = None
+        self._value = None  # the value of... something, I guess?
+
 
         # add a list of lines connected for display purposes
         self.lines = {}
         self.synapsis = {}
 
-        # the value of... something, I guess?
-        self.value = None
+    @property
+    def value(self):
+        if self._value is not None:
+            return self._value
+        raise RuntimeWarning('node value not defined yet')
+
+    @value.setter
+    def value(self, value):
+        self._value = value # never used the word 'value' so much times in my life
 
     def connect(self, child, distance):
-
         # connections are called one time for couple
         self.childs[child] = distance
         child.childs[self] = distance
@@ -33,7 +41,15 @@ class Node:
         return np.sqrt(np.sum((self.position - child.position)**2))
 
     def get_pulled_by_childs(self, epsilon):
+        '''Gradient-based move for MDE
 
+        For the single node the loss function (difference from target distance) is
+
+        L = sum_childs[ ( distance_from_child - target_distance_from_child)**2 ]
+
+        so  - grad (L) = 2 * sum_c[ (x - x_c)/|x - x_c| * ( |x - x_c| - target_dist) ]
+
+        '''
         delta = np.zeros(self.position.shape)
         for child, target_dist in self.childs.items():
             real_dist = self.current_dist_from(child)
@@ -131,7 +147,6 @@ class Network:
             links[hash(Link(i,j))] = distance # pretty useless
 
         print(f'Network has {len(net.nodes)} elements and {len(links)} links')
-        print(links)
         return net
 
     @classmethod
@@ -271,14 +286,15 @@ class Network:
         number of iterations each node repel each other, then it is relaxed by
         child-pulling to the minimum distortion.
         '''
+        with tqdm(range(Nsteps), desc=f'MDE') as pbar:
+            for iteration in pbar:
+                if self.max_expansions > 0:
+                    self.expand(1.)
+                    self.max_expansions -= 1
 
-        for iteration in tqdm(range(Nsteps), desc=f'MDE step -- distortion {self.distortion :8.2f}'):
-            if self.max_expansions > 0:
-                self.expand(1.)
-                self.max_expansions -= 1
-
-            for node in self.nodes.values():
-                node.get_pulled_by_childs(0.1)
+                for node in self.nodes.values():
+                    node.get_pulled_by_childs(0.1)
+                pbar.set_description(f'MDE -- distortion {self.distortion :.2f}')
 
             # if verbose: print(f'>> MDE {int(iteration/Nsteps*100) : 2d}% --- distortion: {self.distortion :.2f}', end='\r')
 
@@ -332,14 +348,25 @@ class Network:
         return cls.from_sparse(M)
 
     @classmethod
-    def Random(cls, number_of_nodes, connection_probability, max_dist):
-        # M = np.array([])
-        # for i in tqdm(range(number_of_nodes), desc='generating adiacence matrix', leave=False):
-        #     for j in range(i+1, number_of_nodes):
-        #         if np.random.uniform(0,1) < connection_probability:
-        #             M = np.append(M, [i,j, np.random.uniform(0,max_dist)])
-        # M = M.reshape((-1,3))
-        # net = cls.from_sparse(M)
+    def Random(cls, number_of_nodes, connection_probability, max_dist=1.):
+        '''Random network constructor
+
+        Since it is unclear to me what a random network is,
+        I made all wrong on purpose.
+
+        A random matrix is generated, uniform elements.
+
+        Then the symmetrization operation spoils the statistical properties
+        since the elements of (M + transpose(M))/2 are distributed
+        as a triangle.
+
+        Then links are generated for the element that are above the threshold
+        given by connection_probability.
+
+        I know It doesn't really make any sense, but in this way
+        'connection_probability' parametrizes the number of connections
+        from 0 -> N(N-1/2) in a smooth way.
+        '''
         M = np.random.uniform(0,1, size=number_of_nodes**2).reshape((-1, number_of_nodes))
         M = 0.5*(M + M.transpose())
         np.fill_diagonal(M, 1.)
@@ -357,10 +384,9 @@ class Network:
         return desc
 
 if __name__ == '__main__':
-    np.random.seed(121)
-    A = Network.Random(10,.5,1.)
+    A = Network.Random(10,.8)
     A.init_positions(dim=3)
-    A.print_distanceM(target=True)
+    # A.print_distanceM(target=True)
     # A.MDE(Nsteps=100)
     A.print_distanceM(target=False)
     # print(A.get_distanceSM())
@@ -368,8 +394,8 @@ if __name__ == '__main__':
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d')
 
-    # netplot.plot(A,ax)
+    netplot.plotNet(A,ax)
     # animation = netplot.animate_MDE(A,fig,ax,frames=120, interval=75, blit=False)
     # animation.save('random.mp4',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}: D = {A.distortion:.2f} (remaining expansions: {A.max_expansions})', end='\r'), dpi=200)
-    netplot.plot_links(A)
+    # netplot.plot_links(A)
     plt.show()
