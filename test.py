@@ -15,24 +15,28 @@ import network as nw
 import netplot
 
 from termcolor import colored
+from timeit import default_timer as time
 
 class propagateNet(nw.Network):
     def __init__(self):
-        self.net = nw.Network.Random(50,.1,5.)
+        self.net = nw.Network.Random(1000,.01,5.)
         self.net.init_positions(dim=3)
 
         for node in self.net.nodes.values():
-            node.value =  np.random.randint(20)
+            node.value = 0# np.random.randint(20)
 
-        self.net.MDE(Nsteps=500)
+        self.net.nodes[0].value = 101
 
-    def update(self, verbose=False):
+        self.net.max_expansion = 0
+        self.net.MDE(Nsteps=10)
+
+    def update(self, verbose=True):
         for node in self.net.nodes.values():
             Ztot = np.sum(1./np.array(list(node.childs.values())))
-            if verbose: print(f'node {node.n}: Ztot = {Ztot : .3f}')
+            if verbose: print(f'node {node.n}: v = {node.value} --- Ztot = {Ztot : .3f}')
             for child, dist in node.childs.items():
                 p = 1./(dist*Ztot)
-                if verbose: print(f'\tchild {child.n : 3}: p = {p : .2f}', end = '\t--> ')
+                if verbose: print(f'\tchild {child.n : 3}: v = {child.value} --- p = {p : .2f}', end = '\t--> ')
                 if child.value < node.value and node.value > 0:
                     if verbose: print(colored('transaction possible', 'blue'), end='\t--> ')
                     if np.random.uniform(0,1) < p:
@@ -52,7 +56,26 @@ fig = plt.figure()
 ax = fig.add_subplot(projection='3d')
 
 # netplot.plotNet(A.net,ax)
-animation = netplot.animate_values(A, fig, ax, frames=200, interval=60, blit=False)
-animation.save('random.gif',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}', end='\r'), dpi=300)
+# animation = netplot.animate_values(A, fig, ax, frames=200, interval=60, blit=False)
+# animation.save('random.gif',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}', end='\r'), dpi=300)
+
+def timed_update():
+    total = 0
+    counts = 0
+    last_time = time()
+    print()
+    def accumulate():
+        nonlocal total, counts, last_time
+        A.update(verbose=False)
+        total += time() - last_time
+        last_time = time()
+        counts += 1
+        print(f'avg update time: {total/counts*1000 :.2f} ms', end='\r')
+
+    return accumulate
+
+up = timed_update()
+while True:
+    up()
 
 plt.show()
