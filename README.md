@@ -1,3 +1,4 @@
 # networkMDE
 Minimum distortion embedding for networks and... other almost uncorrelated stuff
-![eggbox](assets/ne.png)
+![static](assets/ne.png)
+![dynamic](assets/random_big.gif)
