@@ -19,7 +19,7 @@ from timeit import default_timer as time
 
 class propagateNet(nw.Network):
     def __init__(self):
-        self.net = nw.Network.Random(1000,.01,5.)
+        self.net = nw.Network.Random(20,.5,5.)
         self.net.init_positions(dim=3)
 
         for node in self.net.nodes.values():
@@ -28,12 +28,15 @@ class propagateNet(nw.Network):
         self.net.nodes[0].value = 101
 
         self.net.max_expansion = 0
-        self.net.MDE(Nsteps=10)
+        # self.net.MDE(Nsteps=500)
+
+        self.updated_times = 0
 
     def update(self, verbose=True):
+        self.updated_times += 1
         for node in self.net.nodes.values():
             Ztot = np.sum(1./np.array(list(node.childs.values())))
-            if verbose: print(f'node {node.n}: v = {node.value} --- Ztot = {Ztot : .3f}')
+            if verbose: print(f'epoch:{self.updated_times} node {node.n}: v = {node.value} --- Ztot = {Ztot : .3f}')
             for child, dist in node.childs.items():
                 p = 1./(dist*Ztot)
                 if verbose: print(f'\tchild {child.n : 3}: v = {child.value} --- p = {p : .2f}', end = '\t--> ')
@@ -56,8 +59,9 @@ fig = plt.figure()
 ax = fig.add_subplot(projection='3d')
 
 # netplot.plotNet(A.net,ax)
-# animation = netplot.animate_values(A, fig, ax, frames=200, interval=60, blit=False)
-# animation.save('random.gif',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}', end='\r'), dpi=300)
+animation = netplot.animate_MDE(A.net, fig, ax, frames=50, interval=60, blit=False)
+animation.save('random_MDE.gif',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}', end='\r'), dpi=300)
+plt.show()
 
 def timed_update():
     total = 0
@@ -77,5 +81,3 @@ def timed_update():
 up = timed_update()
 while True:
     up()
-
-plt.show()

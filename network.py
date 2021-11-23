@@ -223,10 +223,6 @@ class Network:
                 self._distanceM[node.n, another_node.n] = np.sqrt(np.sum( (node.position - another_node.position)**2 ))
         return self._distanceM
 
-    @distanceM.setter
-    def distanceM(self, matrix):
-        self._distanceM = matrix
-
     @property
     def distanceSM(self):
         nlinks = np.sum(self.linkM.astype(np.int))
@@ -367,6 +363,7 @@ class Network:
         'connection_probability' parametrizes the number of connections
         from 0 -> N(N-1/2) in a smooth way.
         '''
+        print('Initializing..', end='\r')
         M = np.random.uniform(0,1, size=number_of_nodes**2).reshape((-1, number_of_nodes))
         M = 0.5*(M + M.transpose())
         np.fill_diagonal(M, 1.)
