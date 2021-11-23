@@ -58,7 +58,7 @@ class propagateNet(nw.Network):
                     if verbose: print(colored('transaction impossible','red'))
 
     def update(self, verbose=False):
-        if int(self.updated_times) % 20 == 0:
+        if int(self.updated_times) % 10 == 0:
             self.apple_game()
         self.net.MDE(Nsteps=10)
         self.updated_times += 1
