@@ -28,7 +28,7 @@ class propagateNet(nw.Network):
         self.net.nodes[0].value = 11
 
         self.net.max_expansion = 0
-        self.net.MDE(Nsteps=10)
+        self.net.MDE(Nsteps=500)
 
         self.updated_times = 0
     def apple_game(self, verbose=False):
@@ -60,7 +60,7 @@ class propagateNet(nw.Network):
     def update(self, verbose=False):
         if int(self.updated_times) % 20 == 0:
             self.apple_game()
-        self.net.MDE(Nsteps=5)
+        self.net.MDE(Nsteps=10)
         self.updated_times += 1
 
 
@@ -69,7 +69,7 @@ A = propagateNet()
 A.net.print_distanceM()
 
 animation = netplot.animate_super_network(A, A.update,
-                                            frames=400, interval=60, blit=True)
+                                            frames=150, interval=60, blit=True)
 
-# animation.save('random_2d.gif',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}', end='\r'), dpi=150)
+animation.save('random_2d.gif',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}', end='\r'), dpi=80)
 plt.show()

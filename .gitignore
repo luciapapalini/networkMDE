@@ -2,6 +2,8 @@
 *.mp4
 *.gif
 
+!assets/*.gif
+
 
 __pycache__/
 *.py[cod]
