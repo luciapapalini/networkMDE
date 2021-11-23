@@ -19,7 +19,7 @@ from timeit import default_timer as time
 
 class propagateNet(nw.Network):
     def __init__(self):
-        self.net = nw.Network.Random(30,.5,5.)
+        self.net = nw.Network.Random(100,.2)
         self.net.init_positions(dim=2)
 
         for node in self.net.nodes.values():
@@ -58,7 +58,7 @@ class propagateNet(nw.Network):
                     if verbose: print(colored('transaction impossible','red'))
 
     def update(self, verbose=False):
-        if int(self.updated_times) % 10 == 0:
+        if int(self.updated_times) % 5 == 0:
             self.apple_game()
         self.net.MDE(Nsteps=10)
         self.updated_times += 1
