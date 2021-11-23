@@ -19,21 +19,20 @@ from timeit import default_timer as time
 
 class propagateNet(nw.Network):
     def __init__(self):
-        self.net = nw.Network.Random(20,.5,5.)
-        self.net.init_positions(dim=3)
+        self.net = nw.Network.Random(30,.5,5.)
+        self.net.init_positions(dim=2)
 
         for node in self.net.nodes.values():
             node.value = 0# np.random.randint(20)
 
-        self.net.nodes[0].value = 101
+        self.net.nodes[0].value = 11
 
         self.net.max_expansion = 0
-        # self.net.MDE(Nsteps=500)
+        self.net.MDE(Nsteps=10)
 
         self.updated_times = 0
+    def apple_game(self, verbose=False):
 
-    def update(self, verbose=True):
-        self.updated_times += 1
         for node in self.net.nodes.values():
             Ztot = np.sum(1./np.array(list(node.childs.values())))
             if verbose: print(f'epoch:{self.updated_times} node {node.n}: v = {node.value} --- Ztot = {Ztot : .3f}')
@@ -47,37 +46,30 @@ class propagateNet(nw.Network):
                         child.value += 1
                         node.value -= 1
                         node.synapsis[child] = True
+
+                        # synapsis enhancement/ distance reduction
+                        node.childs[child] = node.childs[child]*0.5
+
                     else:
                         node.synapsis[child] = False
                         if verbose: print(colored('apple not given', 'red'))
                 else:
                     node.synapsis[child] = False
                     if verbose: print(colored('transaction impossible','red'))
+
+    def update(self, verbose=False):
+        if int(self.updated_times) % 20 == 0:
+            self.apple_game()
+        self.net.MDE(Nsteps=5)
+        self.updated_times += 1
+
+
+
 A = propagateNet()
+A.net.print_distanceM()
 
-fig = plt.figure()
-ax = fig.add_subplot(projection='3d')
+animation = netplot.animate_super_network(A, A.update,
+                                            frames=400, interval=60, blit=True)
 
-# netplot.plotNet(A.net,ax)
-animation = netplot.animate_MDE(A.net, fig, ax, frames=50, interval=60, blit=False)
-animation.save('random_MDE.gif',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}', end='\r'), dpi=300)
+# animation.save('random_2d.gif',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}', end='\r'), dpi=150)
 plt.show()
-
-def timed_update():
-    total = 0
-    counts = 0
-    last_time = time()
-    print()
-    def accumulate():
-        nonlocal total, counts, last_time
-        A.update(verbose=False)
-        total += time() - last_time
-        last_time = time()
-        counts += 1
-        print(f'avg update time: {total/counts*1000 :.2f} ms', end='\r')
-
-    return accumulate
-
-up = timed_update()
-while True:
-    up()

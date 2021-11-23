@@ -79,11 +79,7 @@ class Link:
         self.b = b
 
     def __hash__(self):
-        # I need a symmetric hardly-repeatable function
-        # so that h(1,2) == h(2,1) ( 1->2 is the same as 2->1)
-        # but the dict looses efficiency for collisions
-        # so h(.,. ) = .+. is not intelligent (6 = 3+3, 2+4, 1+5,...)
-        return self.a**10 + self.b**10
+        return hash((self.a + self.b)/(self.a+1)/(self.b+1))
 
 class Network:
 
@@ -118,7 +114,6 @@ class Network:
 
         net.targetSM = np.array(sparse_matrix)
         net.N = int(np.max(net.targetSM.transpose()[:2])) + 1
-
 
         net.linkM = np.zeros((net.N, net.N), dtype=np.bool)
         net.targetM = np.zeros((net.N, net.N), dtype=np.float32)
@@ -212,8 +207,17 @@ class Network:
             node.position = np.random.uniform(np.zeros((dim)), np.ones((dim)))
 
     @property
-    def colors(self):
+    def values(self):
         return [node.value for node in self.nodes.values()]
+
+    @property
+    def activations(self):
+        activations = np.array([])
+        for node in self.nodes.values():
+            for child in node.childs:
+                activations = np.append( activations,
+                                        int(node.synapsis[child]))
+        return activations
 
     @property
     def distanceM(self):
@@ -241,6 +245,21 @@ class Network:
     @property
     def distortion(self):
         return np.sum(((self.targetM - self.distanceM)*self.linkM.astype(np.float64))**2)
+
+    def edges_as_couples(self):
+        '''returns list of
+
+        [x1,x2], [y1,y2], [z1,z2]
+
+        '''
+
+        # for the future: this part is notintelligent and
+        # ultra redundant, find a better structure using links
+        edges = []
+        for node in self.nodes.values():
+            for child in node.childs:
+                edges.append( np.vstack((node.position, child.position)).transpose() )
+        return np.array(edges)
 
     def expand(self, epsilon):
         '''pushes all nodes away from all nodes,
@@ -308,7 +327,7 @@ class Network:
     def print_distanceM(self, target=False):
         M = self.targetM if target else self.distanceM
         title = 'Target matrix' if target else 'Current matrix '
-        print(title + (30 -len(title))*'-' + f'(D = {A.distortion:.1e})')
+        print(title + (30 -len(title))*'-' + f'(D = {self.distortion:.1e})')
         for i in range(self.N):
             for j in range(self.N):
                 color = 'green' if self.linkM[i,j] else 'red'
@@ -388,11 +407,8 @@ if __name__ == '__main__':
     A.print_distanceM(target=False)
     # print(A.get_distanceSM())
 
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
-
-    netplot.plotNet(A,ax)
-    # animation = netplot.animate_MDE(A,fig,ax,frames=120, interval=75, blit=False)
+    netplot.plotNet(A)
+    # animation = netplot.animate_MDE(A,frames=120, interval=75, blit=False)
     # animation.save('random.mp4',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}: D = {A.distortion:.2f} (remaining expansions: {A.max_expansions})', end='\r'), dpi=200)
     # netplot.plot_links(A)
     plt.show()
