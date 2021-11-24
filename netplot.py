@@ -1,3 +1,7 @@
+'''Graphic module for networks.
+Most things are not elegant/efficient, in y defense I have to say
+that matplotlib has the most strange way to manage Path3Dcollections and Line3D.
+'''
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation

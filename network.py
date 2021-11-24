@@ -1,4 +1,9 @@
-'''Pretty dumb module for managing networks'''
+'''Pretty dumb module for managing networks and display them in the less
+distorted way possible (MDE).
+
+author: djanloo
+date: 20 nov 21
+'''
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -43,7 +48,7 @@ class Node:
     def get_pulled_by_childs(self, epsilon):
         '''Gradient-based move for MDE
 
-        For the single node the loss function (difference from target distance) is
+        For the single node the loss function (difference from target distance)**2 is
 
         L = sum_childs[ ( distance_from_child - target_distance_from_child)**2 ]
 
@@ -85,21 +90,18 @@ class Network:
 
     def __init__(self, nodes):
 
-        self.nodes = {}
+        self.nodes = {} # correct: stanndard constructor does not work
         self.N = None
-        self.executed_paths = [] # suggestion for the future: implement an iteration method
         self.repr_dim = 2
 
-        # theese attributes must be filled
-        # at the end of each constructor
-        # M stands for matrix, SM stands for sparse
-        self.targetM = None
+        # suggestion for the future: implement an iteration method (Dijkstra)
+        self.executed_paths = []
+
         self._distanceM = None
         self.linkM = None
         self.targetSM = None
-        self.distanceSM = None
 
-        # for display purposes ()
+        # for display purposes
         self.scatplot = None
 
         #blow-the-glove max iterations
@@ -146,7 +148,7 @@ class Network:
 
     @classmethod
     def from_adiacence(cls, matrix):
-        '''generates network from a sparse matrix'''
+        '''generates network from an adiacence matrix'''
         # here checks if the matrix is a good one
         # that is to say square, symmetric and M_ii = 0
         # float comparison: dangerous?
@@ -252,8 +254,7 @@ class Network:
         [x1,x2], [y1,y2], [z1,z2]
 
         '''
-
-        # for the future: this part is notintelligent and
+        # for the future: this part is not intelligent and
         # ultra redundant, find a better structure using links
         edges = []
         for node in self.nodes.values():
@@ -274,7 +275,10 @@ class Network:
             node.position += delta/self.N
 
     def MDE(self, Nsteps=10, verbose=True):
-        '''Minimal distortion embedding
+        '''Minimal distortion embedding algorithm.
+
+        I have to be honest, it\'s just a pretty dumb and not supported strategy
+        I came out with.
 
         Minimizes the discrepancy between the target distances and the
         actual distances of the points by letting each node be pulled by its childs.
@@ -298,7 +302,7 @@ class Network:
         than the first.
 
         To solve this the algorithm uses a blow-the-glove strategy: for a fixed
-        number of iterations each node repel each other, then it is relaxed by
+        number of iterations each node repels each other, then the networks is relaxed by
         child-pulling to the minimum distortion.
         '''
         with tqdm(range(Nsteps), desc=f'MDE') as pbar:
@@ -311,8 +315,6 @@ class Network:
                     node.get_pulled_by_childs(0.1)
                 pbar.set_description(f'MDE -- distortion {self.distortion :.2f}')
 
-            # if verbose: print(f'>> MDE {int(iteration/Nsteps*100) : 2d}% --- distortion: {self.distortion :.2f}', end='\r')
-
         # ending: subtracts position of center of mass
         Xcm = np.zeros(self.repr_dim)
         for node in self.nodes.values():
@@ -320,6 +322,11 @@ class Network:
 
         for node in self.nodes.values():
             node.position -= Xcm
+
+        # sometimes the networks starts rotating (the optimal embedding is
+        # invariant under rotations) but since the particles are not respecting
+        # a dynamical law (no velocity that has memory of the past) I don't know
+        # how to stop this
 
     def to_scatter(self):
         return np.array([node.position for node in self.nodes.values()]).transpose()

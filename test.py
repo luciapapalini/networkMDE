@@ -19,7 +19,7 @@ from timeit import default_timer as time
 
 class propagateNet(nw.Network):
     def __init__(self):
-        self.net = nw.Network.Random(100,.2)
+        self.net = nw.Network.Random(100,.15)
         self.net.init_positions(dim=2)
 
         for node in self.net.nodes.values():
@@ -39,7 +39,7 @@ class propagateNet(nw.Network):
             for child, dist in node.childs.items():
                 p = 1./(dist*Ztot)
                 if verbose: print(f'\tchild {child.n : 3}: v = {child.value} --- p = {p : .2f}', end = '\t--> ')
-                if child.value < node.value and node.value > 0:
+                if  True:
                     if verbose: print(colored('transaction possible', 'blue'), end='\t--> ')
                     if np.random.uniform(0,1) < p:
                         if verbose: print(colored('apple given', 'green'))
@@ -48,7 +48,7 @@ class propagateNet(nw.Network):
                         node.synapsis[child] = True
 
                         # synapsis enhancement/ distance reduction
-                        node.childs[child] = node.childs[child]*0.5
+                        node.childs[child] = node.childs[child]*0.9
 
                     else:
                         node.synapsis[child] = False
@@ -60,6 +60,7 @@ class propagateNet(nw.Network):
     def update(self, verbose=False):
         if int(self.updated_times) % 5 == 0:
             self.apple_game()
+            self.net.expand(.01)
         self.net.MDE(Nsteps=10)
         self.updated_times += 1
 
