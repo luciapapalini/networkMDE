@@ -1,6 +1,8 @@
 # Byte-compiled / optimized / DLL files
 *.mp4
 *.gif
+extension_test/
+*.exe
 
 !assets/*.gif
 

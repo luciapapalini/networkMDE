@@ -415,6 +415,7 @@ if __name__ == '__main__':
     # print(A.get_distanceSM())
 
     netplot.plotNet(A)
+
     # animation = netplot.animate_MDE(A,frames=120, interval=75, blit=False)
     # animation.save('random.mp4',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}: D = {A.distortion:.2f} (remaining expansions: {A.max_expansions})', end='\r'), dpi=200)
     # netplot.plot_links(A)
