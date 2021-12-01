@@ -16,10 +16,12 @@ import netplot
 
 from termcolor import colored
 from timeit import default_timer as time
+import cnets
 
 class propagateNet(nw.Network):
+
     def __init__(self):
-        self.net = nw.Network.Random(100,.15)
+        self.net = nw.Network.Random(3000,.15)
         self.net.init_positions(dim=2)
 
         for node in self.net.nodes.values():
@@ -28,9 +30,12 @@ class propagateNet(nw.Network):
         self.net.nodes[0].value = 11
 
         self.net.max_expansion = 0
-        self.net.cMDE(Nsteps=500)
+        
+        cnets.init_network(self.net.targetSM, self.net.values, self.net.repr_dim)
+        self.net.cMDE(Nsteps=1000)
 
         self.updated_times = 0
+
     def apple_game(self, verbose=False):
 
         for node in self.net.nodes.values():
@@ -61,16 +66,16 @@ class propagateNet(nw.Network):
         if int(self.updated_times) % 5 == 0:
             self.apple_game()
             self.net.expand(.01)
-        self.net.cMDE(Nsteps=100)
+        self.net.cMDE(Nsteps=50)
         self.updated_times += 1
 
 
 
 A = propagateNet()
-A.net.print_distanceM()
+# A.net.print_distanceM()
 
-animation = netplot.animate_super_network(A, A.update,
-                                            frames=150, interval=60, blit=True)
+# animation = netplot.animate_super_network(A, A.update,
+#                                            frames=150, interval=60, blit=True)
 
-animation.save('random_2d.gif',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}', end='\r'), dpi=80)
-plt.show()
+# animation.save('random_2d.gif',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}', end='\r'), dpi=80)
+# plt.show()

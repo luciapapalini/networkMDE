@@ -338,11 +338,10 @@ class Network:
         # how to stop this
 
     def cMDE(self,Nsteps=1000):
-        print(f"starting from {self.targetSM}")
-        cnets.init_network(self.targetSM, self.values, self.repr_dim)
+
         cnets.MDE(0.1, Nsteps)
         positions = cnets.get_positions()
-        print(f"len of result is {len(positions)} while len of nodes in the network is {len(self.nodes)}")
+
         for node, position in zip(self.nodes.values(), positions):
             node.position = np.array(position)
 

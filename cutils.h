@@ -1,0 +1,1 @@
+void progress_bar(float progress, int length);

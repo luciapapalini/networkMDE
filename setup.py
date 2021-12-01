@@ -5,7 +5,7 @@ def main():
           version="1.0.0",
           description="C module for network computing",
           author="djanloo",
-          ext_modules=[Extension("cnets", ["cnets.c"])])
+          ext_modules=[Extension("cnets", ["cnets.c", "cutils.c"])])
 
 if __name__ == "__main__":
     main()
