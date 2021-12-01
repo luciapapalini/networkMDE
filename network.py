@@ -42,7 +42,10 @@ class Node:
     def connect(self, child, distance):
         # connections are called one time for couple
         self.childs[child] = distance
+        self.synapsis[child] = False
+
         child.childs[self] = distance
+        child.synapsis[self] = False
 
     def current_dist_from(self, child):
         return np.sqrt(np.sum((self.position - child.position)**2))

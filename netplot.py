@@ -14,17 +14,15 @@ def norm(x):
 
 def get_graphics(net):
 
-    #creates figure and axis
+    # creates figure and axis
     fig = plt.figure(figsize=(3,3))
     ax = fig.add_subplot(projection='3d') if net.repr_dim==3 else fig.add_subplot()
 
-    # ax.axes.xaxis.set_ticklabels([])
-    # ax.axes.yaxis.set_ticklabels([])
-
+    # length scale is useless
     ax.axis('off')
 
     empty = [[],[], []] if ax.name == '3d' else [[],[]]
-    kwargs = {'cmap':'plasma', 's':50}
+    kwargs = {'cmap':'plasma', 's':50, 'alpha': 0.4}
     if ax.name != '3d':
         kwargs['zorder']=10
     # plots points
@@ -72,7 +70,7 @@ def update_scatter(ax, scat, position, colors, normalize_colors=True):
     # set_offsets takes ([x1, y1], [x2, y2], ...) and
     # not ([x1, x2, ..], [y1, y2, ...]) as a good boy would do
     # also, z coordinates must be set AFTER the x-y coordinates
-    
+
     position_on_plane = tuple(np.vstack((x,y)).transpose())
     scat.set_offsets(position_on_plane)
 
@@ -151,6 +149,24 @@ def animate_super_network(super_net, super_net_function, **anim_kwargs):
     super_net.net.animation = animation.FuncAnimation(fig, _update_graphics, **anim_kwargs)
     return super_net.net.animation
 
+
+def plot_net(net):
+
+    fig, ax, (scat, *lines) = get_graphics(net)
+
+    positions = net.to_scatter()
+    values = net.values
+    activations = net.activations
+
+    point_colors = values
+    line_colors = np.array([hsv_to_rgb((0., 1., a )) for a in activations])
+    line_alpha  = [.2+ .8*a for a in activations]
+
+    line_data = net.edges_as_couples()
+
+    update_scatter(ax, scat, positions, point_colors)
+    update_lines(ax, tuple(lines), line_data,
+                    line_colors, line_alpha)
 
 def plot_links(net):
 

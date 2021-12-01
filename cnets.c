@@ -206,21 +206,14 @@ PyObject * MDE(PyObject * self, PyObject * args){
     for (int i = 0; i < number_of_steps; i++)
     {   
         progress_bar(((float)i)/( (float) number_of_steps) , 60);
-
         for (int current_node = 0; current_node < G.N_nodes; current_node++)
         {
             for (int current_child = 0; current_child < G.nodes[current_node].childs_number; current_child++ )
             {
-
                 child_index = G.nodes[current_node].childs[current_child];
-
-                actual_distance = distance(G.nodes[current_node].position, G.nodes[child_index].position, G.embedding_dimension);
-                //printf("\tactual_distance(%d - %d) = %lf\n-----------\n", current_node, child_index, actual_distance);
-                
+                actual_distance = distance(G.nodes[current_node].position, G.nodes[child_index].position, G.embedding_dimension);                
                 factor = eps*(1.- G.nodes[current_node].distances[current_child]/actual_distance)/G.nodes[current_node].childs_number;
-                //printf("factor = %lf\n", factor);
                 
-                //printf("] \n");
                 for (int d = 0; d < G.embedding_dimension; d++)
                 {
                     G.nodes[current_node].position[d] += factor*(G.nodes[child_index].position[d] - G.nodes[current_node].position[d]) ;

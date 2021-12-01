@@ -21,7 +21,7 @@ import cnets
 class propagateNet(nw.Network):
 
     def __init__(self):
-        self.net = nw.Network.Random(3000,.15)
+        self.net = nw.Network.Random(1000,.15)
         self.net.init_positions(dim=2)
 
         for node in self.net.nodes.values():
@@ -54,7 +54,6 @@ class propagateNet(nw.Network):
 
                         # synapsis enhancement/ distance reduction
                         node.childs[child] = node.childs[child]*0.9
-
                     else:
                         node.synapsis[child] = False
                         if verbose: print(colored('apple not given', 'red'))
@@ -76,6 +75,6 @@ A = propagateNet()
 
 # animation = netplot.animate_super_network(A, A.update,
 #                                            frames=150, interval=60, blit=True)
-
+netplot.plot_net(A.net)
 # animation.save('random_2d.gif',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}', end='\r'), dpi=80)
-# plt.show()
+plt.show()
