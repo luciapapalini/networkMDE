@@ -67,10 +67,12 @@ def update_scatter(ax, scat, position, colors, normalize_colors=True):
         x,y,z = position
     else:
         x,y = position
+
     # NOTE ABOUT Path3Dcollection (matplotib v3.5.0)
     # set_offsets takes ([x1, y1], [x2, y2], ...) and
     # not ([x1, x2, ..], [y1, y2, ...]) as a good boy would do
     # also, z coordinates must be set AFTER the x-y coordinates
+    
     position_on_plane = tuple(np.vstack((x,y)).transpose())
     scat.set_offsets(position_on_plane)
 
@@ -151,5 +153,6 @@ def animate_super_network(super_net, super_net_function, **anim_kwargs):
 
 
 def plot_links(net):
+
     fig,ax = plt.subplots()
     ax.imshow(net.linkM.astype(float), cmap='gray')
