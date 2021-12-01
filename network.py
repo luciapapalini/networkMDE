@@ -13,6 +13,8 @@ import utils
 from termcolor import colored
 from tqdm import trange, tqdm
 
+import cnets
+
 class Node:
 
     def __init__(self, n):
@@ -99,7 +101,7 @@ class Network:
 
         self._distanceM = None
         self.linkM = None
-        self.targetSM = None
+        self._targetSM = None
 
         # for display purposes
         self.scatplot = None
@@ -114,8 +116,8 @@ class Network:
         # raw init
         net = cls([])
 
-        net.targetSM = np.array(sparse_matrix)
-        net.N = int(np.max(net.targetSM.transpose()[:2])) + 1
+        net._targetSM = np.array(sparse_matrix)
+        net.N = int(np.max(net._targetSM.transpose()[:2])) + 1
 
         net.linkM = np.zeros((net.N, net.N), dtype=np.bool)
         net.targetM = np.zeros((net.N, net.N), dtype=np.float32)
@@ -243,6 +245,13 @@ class Network:
     @distanceSM.setter
     def distanceSM(self, smatrix):
         self._distanceSM = smatrix
+    
+    @property
+    def targetSM(self):
+        list = []
+        for i, j, d in self._targetSM:
+            list.append([int(i), int(j), d])
+        return list
 
     @property
     def distortion(self):
@@ -327,6 +336,15 @@ class Network:
         # invariant under rotations) but since the particles are not respecting
         # a dynamical law (no velocity that has memory of the past) I don't know
         # how to stop this
+
+    def cMDE(self,Nsteps=1000):
+        print(f"starting from {self.targetSM}")
+        cnets.init_network(self.targetSM, self.values, self.repr_dim)
+        cnets.MDE(0.1, Nsteps)
+        positions = cnets.get_positions()
+        print(f"len of result is {len(positions)} while len of nodes in the network is {len(self.nodes)}")
+        for node, position in zip(self.nodes.values(), positions):
+            node.position = np.array(position)
 
     def to_scatter(self):
         return np.array([node.position for node in self.nodes.values()]).transpose()

@@ -28,7 +28,7 @@ class propagateNet(nw.Network):
         self.net.nodes[0].value = 11
 
         self.net.max_expansion = 0
-        self.net.MDE(Nsteps=500)
+        self.net.cMDE(Nsteps=500)
 
         self.updated_times = 0
     def apple_game(self, verbose=False):
@@ -61,7 +61,7 @@ class propagateNet(nw.Network):
         if int(self.updated_times) % 5 == 0:
             self.apple_game()
             self.net.expand(.01)
-        self.net.MDE(Nsteps=10)
+        self.net.cMDE(Nsteps=100)
         self.updated_times += 1
 
 
