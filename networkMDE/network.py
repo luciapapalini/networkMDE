@@ -1,29 +1,25 @@
-'''Pretty dumb module for managing networks and display them in the less
+"""Pretty dumb module for managing networks and display them in the less
 distorted way possible (MDE).
 
 author: djanloo
 date: 20 nov 21
-'''
+"""
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-import netplot
-import utils
 
 from termcolor import colored
-from tqdm import trange, tqdm
+from tqdm import tqdm
 
 import cnets
+import utils
+
 
 class Node:
-
     def __init__(self, n):
         self.n = int(n)
         self.childs = {}
         self.distances = {}
         self.position = None
         self._value = None  # the value of... something, I guess?
-
 
         # add a list of lines connected for display purposes
         self.lines = {}
@@ -33,11 +29,11 @@ class Node:
     def value(self):
         if self._value is not None:
             return self._value
-        raise RuntimeWarning('node value not defined yet')
+        raise RuntimeWarning("node value not defined yet")
 
     @value.setter
     def value(self, value):
-        self._value = value # never used the word 'value' so much times in my life
+        self._value = value  # never used the word 'value' so much times in my life
 
     def connect(self, child, distance):
         # connections are called one time for couple
@@ -48,10 +44,10 @@ class Node:
         child.synapsis[self] = False
 
     def current_dist_from(self, child):
-        return np.sqrt(np.sum((self.position - child.position)**2))
+        return np.sqrt(np.sum((self.position - child.position) ** 2))
 
     def get_pulled_by_childs(self, epsilon):
-        '''Gradient-based move for MDE
+        """Gradient-based move for MDE
 
         For the single node the loss function (difference from target distance)**2 is
 
@@ -59,43 +55,44 @@ class Node:
 
         so  - grad (L) = 2 * sum_c[ (x - x_c)/|x - x_c| * ( |x - x_c| - target_dist) ]
 
-        '''
+        """
         delta = np.zeros(self.position.shape)
         for child, target_dist in self.childs.items():
             real_dist = self.current_dist_from(child)
-            delta += (1. - target_dist/real_dist)*(child.position - self.position)
+            delta += (1.0 - target_dist / real_dist) * (child.position - self.position)
 
-        delta *= epsilon/len(self.childs)
+        delta *= epsilon / len(self.childs)
         self.position += delta
 
     def __hash__(self):
         return self.n
 
     def __str__(self):
-        desc = f'node {self.n}: \n'
+        desc = f"node {self.n}: \n"
         for child, dist in self.childs.items():
-            desc += f'\tchild {child.n} at distance {dist}\n'
+            desc += f"\tchild {child.n} at distance {dist}\n"
         return desc
 
+
 class Link:
-    '''almost useless class, may remove it later
+    """almost useless class, may remove it later
 
     Used only to make 1 -> 2 equal to 2 -> 1 like in 'set()' properties.
 
-    '''
+    """
 
-    def __init__(self,a,b):
+    def __init__(self, a, b):
         self.a = a
         self.b = b
 
     def __hash__(self):
-        return hash((self.a + self.b)/(self.a+1)/(self.b+1))
+        return hash((self.a + self.b) / (self.a + 1) / (self.b + 1))
+
 
 class Network:
-
     def __init__(self, nodes):
 
-        self.nodes = {} # correct: stanndard constructor does not work
+        self.nodes = {}  # correct: stanndard constructor does not work
         self.N = None
         self.repr_dim = 2
 
@@ -104,17 +101,18 @@ class Network:
 
         self._distanceM = None
         self.linkM = None
+        self._targetM = None
         self._targetSM = None
 
         # for display purposes
         self.scatplot = None
 
-        #blow-the-glove max iterations
+        # blow-the-glove max iterations
         self.max_expansions = 70
 
     @classmethod
     def from_sparse(cls, sparse_matrix):
-        '''generates network from a sparse matrix'''
+        """generates network from a sparse matrix"""
 
         # raw init
         net = cls([])
@@ -123,47 +121,47 @@ class Network:
         net.N = int(np.max(net._targetSM.transpose()[:2])) + 1
 
         net.linkM = np.zeros((net.N, net.N), dtype=np.bool)
-        net.targetM = np.zeros((net.N, net.N), dtype=np.float32)
+        net._targetM = np.zeros((net.N, net.N), dtype=np.float32)
 
         # gets a sparse matrix like (i,j) dist
         # and create nodes
         links = {}
-        for i,j,distance in net.targetSM:
+        for i, j, distance in net.targetSM:
 
-            i,j = int(i), int(j)
+            i, j = int(i), int(j)
 
-            node_in  = net.nodes.get(i, Node(i)) # fetch from dict or create
-            node_out = net.nodes.get(j, Node(j)) # fetch from dict or create
+            node_in = net.nodes.get(i, Node(i))  # fetch from dict or create
+            node_out = net.nodes.get(j, Node(j))  # fetch from dict or create
             node_in.connect(node_out, distance)  # connect
             net.nodes[i] = node_in  # put back
-            net.nodes[j] = node_out # put back
+            net.nodes[j] = node_out  # put back
 
-            print(f'>> linked {i} to {j}', end='\r')
+            print(f">> linked {i} to {j}", end="\r")
 
-            net.linkM[i,j] = True
-            net.linkM[j,i] = True
+            net.linkM[i, j] = True
+            net.linkM[j, i] = True
 
-            net.targetM[i,j] = distance
-            net.targetM[j,i] = distance
+            net._targetM[i, j] = distance
+            net._targetM[j, i] = distance
 
-            links[hash(Link(i,j))] = distance # pretty useless
+            links[hash(Link(i, j))] = distance  # pretty useless
 
-        print(f'Network has {len(net.nodes)} elements and {len(links)} links')
+        print(f"Network has {len(net.nodes)} elements and {len(links)} links")
         return net
 
     @classmethod
     def from_adiacence(cls, matrix):
-        '''generates network from an adiacence matrix'''
+        """generates network from an adiacence matrix"""
         # here checks if the matrix is a good one
         # that is to say square, symmetric and M_ii = 0
         # float comparison: dangerous?
         matrix = np.array(matrix)
 
         if (matrix != matrix.transpose()).any():
-            raise ValueError('Matrix is not symmetric')
+            raise ValueError("Matrix is not symmetric")
 
         if (matrix.diagonal() != np.zeros(len(matrix))).any():
-            raise ValueError('Matrix has non-null diagonal')
+            raise ValueError("Matrix has non-null diagonal")
 
         sparseM = utils.matrix_to_sparse(matrix)
         net = Network.from_sparse(sparseM)
@@ -171,7 +169,7 @@ class Network:
 
     @classmethod
     def connect(cls, networks, links, distances):
-        '''connects two networks.
+        """connects two networks.
 
         Args
         ----
@@ -182,8 +180,8 @@ class Network:
                 links (net1_node_a, net2_node_b). -1 stands for densely connected.
 
                 e.g, (5, -1) connects every element of net2 to element 5 of net1.
-        '''
-        raise NotImplementedError('I have to finish this')
+        """
+        raise NotImplementedError("I have to finish this")
         net_1, net_2 = networks
         # first shifts every number of the second network
         for N2node in net_2.nodes.values():
@@ -210,7 +208,7 @@ class Network:
 
     def init_positions(self, dim=2):
         self.repr_dim = dim
-        for node in tqdm(self.nodes.values(), desc='position init', leave=False):
+        for node in tqdm(self.nodes.values(), desc="position init", leave=False):
             node.position = np.random.uniform(np.zeros((dim)), np.ones((dim)))
 
     @property
@@ -222,33 +220,40 @@ class Network:
         activations = np.array([])
         for node in self.nodes.values():
             for child in node.childs:
-                activations = np.append( activations,
-                                        int(node.synapsis[child]))
+                activations = np.append(activations, int(node.synapsis[child]))
         return activations
 
     @property
     def distanceM(self):
-        self._distanceM = np.zeros((self.N,self.N))
+        self._distanceM = np.zeros((self.N, self.N))
         for node in self.nodes.values():
             for another_node in self.nodes.values():
-                self._distanceM[node.n, another_node.n] = np.sqrt(np.sum( (node.position - another_node.position)**2 ))
+                self._distanceM[node.n, another_node.n] = np.sqrt(
+                    np.sum((node.position - another_node.position) ** 2)
+                )
         return self._distanceM
+
+    @property
+    def targetM(self):
+        return self._targetM
 
     @property
     def distanceSM(self):
         nlinks = np.sum(self.linkM.astype(np.int))
         self._distanceSM = np.array([])
         for i in range(self.N):
-            for j in range(i+1, self.N):
-                if self.linkM[i,j]:
-                    self._distanceSM = np.append(self._distanceSM, [i,j, self._distanceM[i,j]] )
-        self._distanceSM = self._distanceSM.reshape((-1,3))
+            for j in range(i + 1, self.N):
+                if self.linkM[i, j]:
+                    self._distanceSM = np.append(
+                        self._distanceSM, [i, j, self._distanceM[i, j]]
+                    )
+        self._distanceSM = self._distanceSM.reshape((-1, 3))
         return self._distanceSM
 
     @distanceSM.setter
     def distanceSM(self, smatrix):
         self._distanceSM = smatrix
-    
+
     @property
     def targetSM(self):
         list = []
@@ -258,36 +263,38 @@ class Network:
 
     @property
     def distortion(self):
-        return np.sum(((self.targetM - self.distanceM)*self.linkM.astype(np.float64))**2)
+        return np.sum(
+            ((self._targetM - self.distanceM) * self.linkM.astype(np.float64)) ** 2
+        )
 
     def edges_as_couples(self):
-        '''returns list of
+        """returns list of
 
         [x1,x2], [y1,y2], [z1,z2]
 
-        '''
+        """
         # for the future: this part is not intelligent and
         # ultra redundant, find a better structure using links
         edges = []
         for node in self.nodes.values():
             for child in node.childs:
-                edges.append( np.vstack((node.position, child.position)).transpose() )
+                edges.append(np.vstack((node.position, child.position)).transpose())
         return np.array(edges)
 
     def expand(self, epsilon):
-        '''pushes all nodes away from all nodes,
-        so basically maximizes the distance of everything from everything'''
+        """pushes all nodes away from all nodes,
+        so basically maximizes the distance of everything from everything"""
         for node in self.nodes.values():
             delta = np.zeros(self.repr_dim)
             for anode in self.nodes.values():
                 if node is not anode:
                     real_dist = node.current_dist_from(anode)
-                    delta -= (anode.position - node.position)/real_dist
+                    delta -= (anode.position - node.position) / real_dist
             delta *= epsilon
-            node.position += delta/self.N
+            node.position += delta / self.N
 
     def MDE(self, Nsteps=10, verbose=True):
-        '''Minimal distortion embedding algorithm.
+        """Minimal distortion embedding algorithm.
 
         I have to be honest, it\'s just a pretty dumb and not supported strategy
         I came out with.
@@ -316,31 +323,31 @@ class Network:
         To solve this the algorithm uses a blow-the-glove strategy: for a fixed
         number of iterations each node repels each other, then the networks is relaxed by
         child-pulling to the minimum distortion.
-        '''
-        with tqdm(range(Nsteps), desc=f'MDE') as pbar:
+        """
+        with tqdm(range(Nsteps), desc=f"MDE") as pbar:
             for iteration in pbar:
                 if self.max_expansions > 0:
-                    self.expand(1.)
+                    self.expand(1.0)
                     self.max_expansions -= 1
 
                 for node in self.nodes.values():
                     node.get_pulled_by_childs(0.1)
-                pbar.set_description(f'MDE -- distortion {self.distortion :.2f}')
+                pbar.set_description(f"MDE -- distortion {self.distortion :.2f}")
 
         # ending: subtracts position of center of mass
-        Xcm = np.zeros(self.repr_dim)
+        X_cm = np.zeros(self.repr_dim)
         for node in self.nodes.values():
-            Xcm += node.position/self.N
+            X_cm += node.position / self.N
 
         for node in self.nodes.values():
-            node.position -= Xcm
+            node.position -= X_cm
 
         # sometimes the networks starts rotating (the optimal embedding is
         # invariant under rotations) but since the particles are not respecting
         # a dynamical law (no velocity that has memory of the past) I don't know
         # how to stop this
 
-    def cMDE(self,Nsteps=1000):
+    def cMDE(self, Nsteps=1000):
 
         cnets.MDE(0.1, Nsteps)
         positions = cnets.get_positions()
@@ -352,28 +359,30 @@ class Network:
         return np.array([node.position for node in self.nodes.values()]).transpose()
 
     def print_distanceM(self, target=False):
-        M = self.targetM if target else self.distanceM
-        title = 'Target matrix' if target else 'Current matrix '
-        print(title + (30 -len(title))*'-' + f'(D = {self.distortion:.1e})')
+        M = self._targetM if target else self.distanceM
+        title = "Target matrix" if target else "Current matrix "
+        print(title + (30 - len(title)) * "-" + f"(D = {self.distortion:.1e})")
         for i in range(self.N):
             for j in range(self.N):
-                color = 'green' if self.linkM[i,j] else 'red'
-                attrs = ['dark'] if i==j else ['bold']
-                print(colored(f'{M[i,j]:.2}', color, attrs=attrs), end='\t')
+                color = "green" if self.linkM[i, j] else "red"
+                attrs = ["dark"] if i == j else ["bold"]
+                print(colored(f"{M[i,j]:.2}", color, attrs=attrs), end="\t")
             print()
         print()
 
     @classmethod
     def Hexahedron(cls):
-        M = [[0,1, 1.],
-             [1,2, 1.],
-             [2,0, 1.],
-             [3,0, 1.],
-             [3,1, 1.],
-             [3,2, 1.],
-             [4,0, 1.],
-             [4,1, 1.],
-             [4,2, 1.]]
+        M = [
+            [0, 1, 1.0],
+            [1, 2, 1.0],
+            [2, 0, 1.0],
+            [3, 0, 1.0],
+            [3, 1, 1.0],
+            [3, 2, 1.0],
+            [4, 0, 1.0],
+            [4, 1, 1.0],
+            [4, 2, 1.0],
+        ]
 
         return cls.from_sparse(M)
 
@@ -381,17 +390,17 @@ class Network:
     def Line(cls, n):
         M = []
         for i in range(n):
-            M.append([i, i+1, 1.])
+            M.append([i, i + 1, 1.0])
         return cls.from_sparse(M)
 
     @classmethod
     def Triangle(cls):
-        M = [[0,1, 1.], [1,2, 1.], [2,0, 1.]]
+        M = [[0, 1, 1.0], [1, 2, 1.0], [2, 0, 1.0]]
         return cls.from_sparse(M)
 
     @classmethod
-    def Random(cls, number_of_nodes, connection_probability, max_dist=1.):
-        '''Random network constructor
+    def Random(cls, number_of_nodes, connection_probability, max_dist=1.0):
+        """Random network constructor
 
         Since it is unclear to me what a random network is,
         I made all wrong on purpose.
@@ -408,35 +417,21 @@ class Network:
         I know It doesn't really make any sense, but in this way
         'connection_probability' parametrizes the number of connections
         from 0 -> N(N-1/2) in a smooth way.
-        '''
-        print('Initializing..', end='\r')
-        M = np.random.uniform(0,1, size=number_of_nodes**2).reshape((-1, number_of_nodes))
-        M = 0.5*(M + M.transpose())
-        np.fill_diagonal(M, 1.)
+        """
+        print("Initializing..", end="\r")
+        M = np.random.uniform(0, 1, size=number_of_nodes ** 2).reshape(
+            (-1, number_of_nodes)
+        )
+        M = 0.5 * (M + M.transpose())
+        np.fill_diagonal(M, 1.0)
         links = (M < connection_probability).astype(float)
-        M = M*links*max_dist
+        M = M * links * max_dist
 
         return Network.from_adiacence(M)
 
-
     def __str__(self):
-        '''Describes the tree'''
-        desc = 'Network ---------\n'
+        """Describes the tree"""
+        desc = "Network ---------\n"
         for node in self.nodes.values():
             desc += str(node)
         return desc
-
-if __name__ == '__main__':
-    A = Network.Random(10,.8)
-    A.init_positions(dim=3)
-    # A.print_distanceM(target=True)
-    # A.MDE(Nsteps=100)
-    A.print_distanceM(target=False)
-    # print(A.get_distanceSM())
-
-    netplot.plotNet(A)
-
-    # animation = netplot.animate_MDE(A,frames=120, interval=75, blit=False)
-    # animation.save('random.mp4',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}: D = {A.distortion:.2f} (remaining expansions: {A.max_expansions})', end='\r'), dpi=200)
-    # netplot.plot_links(A)
-    plt.show()
