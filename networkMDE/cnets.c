@@ -223,7 +223,7 @@ PyObject * MDE(PyObject * self, PyObject * args){
             }
         }
     }
-    printf("\nMDE end\n");
+    printf("\ncnets - MDE end\n");
     Py_RETURN_NONE;
 }
 

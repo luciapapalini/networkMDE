@@ -20,6 +20,8 @@ with other methods
 
 class citer:
 
+    citer_name = 'citer_template'
+
     def __init__(self, objs = None):
         self.objs = objs if objs is not None else self.empty
         self._type = None
@@ -38,9 +40,6 @@ class citer:
             self._type = set_type
         else:
             raise TypeError(f"clist type is already set to {self._type}")
-
-    def __getitem__(self, index):
-         return self.objs[index]
     
     def __setitem__(self, key, value):
         self.objs[key] = value
@@ -55,6 +54,12 @@ class citer:
         desc += "]"
         return desc 
     
+    def __iter__(self):
+        return iter(self.objs)
+    
+    def __next__(self):
+        return next(self.objs)
+
     def __len__(self):
         return len(self.objs)
 
@@ -69,6 +74,13 @@ class clist(citer):
     def __iadd__(self, element):
         self.objs.append(element)
         return self
+    
+    def __getitem__(self, index):     
+        try:
+            item = self.objs[index]
+        except KeyError:
+            raise KeyError(f"Requested element {index} of {self.objs}")
+        return item
         
 
 class cdict(citer):
@@ -90,6 +102,13 @@ class cdict(citer):
             self.type = type(value)
             self.objs[key] = value
         return self
+    
+    def __getitem__(self, index):     
+        try:
+            item = self.objs[index]
+        except KeyError:
+            raise KeyError(f"Requested element {index} of {self.objs}")
+        return item
     
     def __str__(self):
         desc = f"{self.__class__.citer_name} of {str(self.type)} ["

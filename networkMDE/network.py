@@ -20,7 +20,7 @@ class Node:
         self.n = int(n)
         self.synapses = ci.cset()
         self._position = None
-        self._value = None  # the value of... something, I guess?
+        self._value = 0  # the value of... something, I guess?
 
     @property
     def value(self):
@@ -46,6 +46,7 @@ class Node:
 
         # connections are called one time for couple
         link = uniLink(self, child)
+        link.length = distance
         self.synapses += link
         child.synapses += link
         return link
@@ -74,7 +75,7 @@ class uniLink:
         self.node2 = node2
 
         # The value of activation of the link and its length
-        self.activation = None
+        self.activation = 0
         self.length = None
 
         # Related graphical objects
@@ -146,7 +147,8 @@ class uniNetwork:
         # self.initialize_embedding(dim=2)
     
     def initialize_embedding(self,dim=2):
-        cnets.init_network(self.targetSM, self.values, dim)
+        cnets.init_network(self.targetSM, self.nodes.value, dim)
+        self.is_cnet_initialized = True
 
     def add_couple(self, node1, node2 , distance):
 
@@ -157,7 +159,6 @@ class uniNetwork:
         self._targetM[node2.n, node1.n] = distance
 
         self.nodes += {node1.n:node1, node2.n:node2}
-
         self.links += node1.connect(node2, distance) 
         
 
@@ -176,16 +177,14 @@ class uniNetwork:
 
         # gets a sparse matrix like (i,j) dist
         # and create nodes
+        print("Linking..                  ", end = '\r')
         for i, j, distance in net.targetSM:
 
             i, j = int(i), int(j)
-            print(colored(f"{net.nodes}", 'green'))
 
             net.add_couple(net.nodes.get(i, Node(i)),
                             net.nodes.get(j, Node(j)), 
                             distance) # connect and add link to set
-
-            print(f">> linked {i} to {j}", end="\r")
 
         print(f"Network has {len(net.nodes)} elements and {len(net.links)} links")
         return net
@@ -248,18 +247,6 @@ class uniNetwork:
                 net_1.nodes[node_net_1].connect(net_2.nodes[node_net_2])
 
     @property
-    def values(self):
-        return [node.value for node in self.nodes.values()]
-
-    @property
-    def activations(self):
-        activations = np.array([])
-        for node in self.nodes.values():
-            for child in node.childs:
-                activations = np.append(activations, int(node.synapsis[child]))
-        return activations
-
-    @property
     def distanceM(self):
         self._distanceM = np.zeros((self.N, self.N))
         for node in self.nodes.values():
@@ -303,28 +290,14 @@ class uniNetwork:
             ((self._targetM - self.distanceM) * self.linkM.astype(np.float64)) ** 2
         )
 
-    def edges_as_couples(self):
-        """returns list of
-
-        [x1,x2], [y1,y2], [z1,z2]
-
-        """
-        # for the future: this part is not intelligent and
-        # ultra redundant, find a better structure using links
-        edges = []
-        for node in self.nodes.values():
-            for child in node.childs:
-                edges.append(np.vstack((node.position, child.position)).transpose())
-        return np.array(edges)
-
     def cMDE(self, Nsteps=1000):
         cnets.MDE(0.1, Nsteps)
         positions = cnets.get_positions()
-        for node, position in zip(self.nodes.values(), positions):
+        for node, position in zip(self, positions):
             node.position = np.array(position)
 
     def to_scatter(self):
-        return np.array([node.position for node in self.nodes.values()]).transpose()
+        return np.array(self.nodes.position).transpose()
 
     def print_distanceM(self, target=False):
         M = self._targetM if target else self.distanceM
@@ -358,7 +331,7 @@ class uniNetwork:
         'connection_probability' parametrizes the number of connections
         from 0 -> N(N-1/2) in a smooth way.
         """
-        print("Initializing..", end="\r")
+        print("Initializing random network...", end="\r")
         M = np.random.uniform(0, 1, size=number_of_nodes ** 2).reshape(
             (-1, number_of_nodes)
         )
@@ -368,6 +341,16 @@ class uniNetwork:
         M = M * links * max_dist
 
         return uniNetwork.from_adiacence(M)
+    
+    def __iter__(self):
+        self.i = 0
+        return self
+    
+    def __next__(self):
+        if self.i > self.N-1:
+            raise StopIteration
+        self.i += 1
+        return self.nodes[self.i - 1]
 
     def __str__(self):
         """Describes the tree"""

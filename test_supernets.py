@@ -21,24 +21,17 @@ import cnets
 
 class propagateNet(nw.uniNetwork):
     def __init__(self):
-        self.net = nw.uniNetwork.Random(20, 0.15)
+        self.net = nw.uniNetwork.Random(3000, 0.15)
         self.net.initialize_embedding(dim=2)
 
-        for node in self.net.nodes.values():
-            node.value = 0  # np.random.randint(20)
-
         self.net.nodes[0].value = 11
-
-        self.net.max_expansion = 0
-
-        cnets.init_network(self.net.targetSM, self.net.values, self.net.repr_dim)
         self.net.cMDE(Nsteps=1000)
 
         self.updated_times = 0
 
     def apple_game(self, verbose=False):
 
-        for node in self.net.nodes.values():
+        for node in self.net:
             Ztot = np.sum(1.0 / np.array(list(node.childs.values())))
             if verbose:
                 print(

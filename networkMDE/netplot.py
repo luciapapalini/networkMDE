@@ -33,41 +33,25 @@ def get_graphics(net):
 
     # plots points
     net.scatplot = ax.scatter(*empty, **scat_kwargs)
-
-    # plots each line (twice, probably can be solved using Link class)
     artists = (net.scatplot,)
 
-    for node in net.nodes.values():
-        for child in node.childs:
-            # line_data = np.vstack((child.position, node.position)).transpose()
-            # line, = ax.plot(*line_data, color='k', alpha=0.3)
-            (line,) = ax.plot(*empty, **line_kwargs)
-            node.lines[child] = line
-            artists += (line,)
+    for link in net.links:
+        # line_data = np.vstack((link.node1.position, link.node2.position)).transpose()
+        # line, = ax.plot(*line_data, color='k', alpha=0.3)
+        (line,) = ax.plot(*empty, **line_kwargs)
+        link.line = line
+        artists += (line,)
+    
+    return fig, ax
 
-    return fig, ax, artists
 
-
-def update_scatter(ax, scat, position, colors, normalize_colors=True):
+def update_scatter(ax, net, colors, normalize_colors=True):
     """Updates the scatter plot position and colors
-
-    Args
-    ----
-        ax : axis
-
-        scat : scatter plot
-
-        position : np.ndarray
-
-        color : np.ndarray
-
-
-    Note
-    ----
-        position must be given in the following format:
-
-        position = [[x1, y1, z1], [x2, y2, z2]]
     """
+
+    position = net.to_scatter()
+    scat = net.scatplot
+
     if ax.name == "3d":
         x_coord, y_coord, z_coord = position
     else:
@@ -100,37 +84,24 @@ def update_scatter(ax, scat, position, colors, normalize_colors=True):
         scat.set_clim(vmin, vmax)
 
 
-def update_lines(ax, lines, positions, colors, alphas):
+def update_lines(ax, net, colors, alphas):
     """updates the lines of the network
-
-    Args
-    ----
-        ax : matplotlib.Axis
-
-        lines : tuple of matplotlib lines
-
-        position : np.ndarray
-
-    Note
-    ----
-        position must be given in the following format:
-
-        position = [ [[x1,x2] , [y1,y2] , [z1,z2]] ]
     """
+    for link, color, alpha in zip(net.links, colors, alphas):
 
-    for position, line, color, alpha in zip(positions, lines, colors, alphas):
+        line_data = np.vstack((link.node1.position, link.node2.position)).transpose()
 
         if ax.name == "3d":
-            x_coord, y_coord, z_coord = position
+            x_coord, y_coord, z_coord = line_data
         else:
-            x_coord, y_coord = position
+            x_coord, y_coord = line_data
 
-        line.set_data(x_coord, y_coord)
-        line.set_color(color)
-        line.set_alpha(alpha)
+        link.line.set_data(x_coord, y_coord)
+        link.line.set_color(color)
+        link.line.set_alpha(alpha)
 
         if ax.name == "3d":
-            line.set_3d_properties(z_coord)
+            link.line.set_3d_properties(z_coord)
 
 
 def animate_super_network(super_net, super_net_function, **anim_kwargs):
@@ -140,6 +111,7 @@ def animate_super_network(super_net, super_net_function, **anim_kwargs):
     ----
         The update function can include an MDE update on position
     """
+    raise NotImplementedError('must be made compatible with classiter')
     fig, ax, (scat, *lines) = get_graphics(super_net.net)
 
     def _update_graphics(_):
@@ -169,19 +141,16 @@ def animate_super_network(super_net, super_net_function, **anim_kwargs):
 def plot_net(net):
     """Plots a statical image for the network embedding"""
     
-    _, ax, (scat, *lines) = get_graphics(net)
+    _, ax = get_graphics(net)
 
-    positions = net.to_scatter()
-    activations = net.activations
+    activations = net.links.activation
+    point_colors = net.nodes.value
 
-    point_colors = net.values
     line_colors = np.array([hsv_to_rgb((0.0, 1.0, a)) for a in activations])
     line_alpha = [0.2 + 0.8 * a for a in activations]
 
-    line_data = net.edges_as_couples()
-
-    update_scatter(ax, scat, positions, point_colors)
-    update_lines(ax, tuple(lines), line_data, line_colors, line_alpha)
+    update_scatter(ax, net, point_colors)
+    update_lines(ax, net, line_colors, line_alpha)
 
 
 def plot_links(net):
