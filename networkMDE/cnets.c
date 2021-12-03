@@ -31,6 +31,8 @@ typedef struct node
     double * position; // Position in the embedding
 } Node;
 
+// Link structure is useless at the moment,
+// may bind it to Linkin python later
 typedef struct link
 {
     Node * node1;
@@ -43,12 +45,13 @@ typedef struct graph
     long N_nodes;
     long N_links;
     Node * nodes;
-    long embedding_dimension;
+    int embedding_dimension;
 } Graph;
 
 // Global variables remain the same call after call
 Graph G;
 
+// Link nodes in the Graph
 void link_nodes(Node * node, long child_index, double distance){
 
     // Adds label of child to child array
@@ -179,13 +182,12 @@ PyObject * init_network(PyObject * self, PyObject * args){
     Py_RETURN_NONE;
 }
 
-double distance(double * pos1, double * pos2, int N){
+double distance(double * pos1, double * pos2, int dim){
 
     double dist = 0.;
-    for (int i = 0; i < N; i++)
+    for (int i = 0; i < dim; i++)
     {
         dist += pow(pos1[i] - pos2[i], 2);
-        //printf("\t pos1[i] = %lf, pos2[i] = %lf, dist = %lf\n",pos1[i],pos2[i], dist);
     }
     return sqrt(dist);
 }
@@ -239,6 +241,35 @@ PyObject * get_positions(PyObject * self, PyObject * args){
     return list;
 }
 
+PyObject * get_distanceSM(PyObject * self, PyObject * args){
+
+    PyObject * distanceSM = PyList_New(G.N_nodes*G.N_nodes);
+    double d;
+    int row_index = 0;
+    Node node, another_node;
+
+    for (int node_index = 0; node_index < G.N_nodes; node_index++)
+    {   
+        for (int another_node_index = 0; another_node_index < G.N_nodes; another_node_index++)
+        {   
+            PyObject * row = PyList_New(3);
+
+            node = G.nodes[node_index];
+            another_node = G.nodes[another_node_index];
+
+            d = distance(node.position, another_node.position, G.embedding_dimension);
+            PyList_SetItem(row, 0, PyLong_FromLong(node.n));
+            PyList_SetItem(row, 1, PyLong_FromLong(another_node.n));
+            PyList_SetItem(row, 2, PyFloat_FromDouble(d));
+
+            PyList_SetItem(distanceSM, row_index, row);
+            row_index ++;
+        }
+        
+    }
+    return distanceSM;
+}
+
 // Python link part - follow the API
 
 // Methods table definition
@@ -246,6 +277,7 @@ static PyMethodDef cnetsMethods[] = {
     {"init_network", init_network, METH_VARARGS, "Initializes the network given a sparse list and a list of values"},
     {"MDE", MDE, METH_VARARGS, "Executes minumum distortion embedding routine"},
     {"get_positions", get_positions, METH_VARARGS, "Gives the computed positions of the network"},
+    {"get_distanceSM", get_distanceSM, METH_VARARGS, "Returns the computed distance sparse matrix"},
     {NULL, NULL, 0, NULL}//Guardian of The Table
 };
 

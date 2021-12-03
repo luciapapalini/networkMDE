@@ -46,18 +46,15 @@ class Node:
 
         # connections are called one time for couple
         link = uniLink(self, child)
-        self.synapses.add(link)
-        child.synapses.add(link)
+        self.synapses += link
+        child.synapses += link
         return link
 
     def __hash__(self):
         return self.n
 
     def __str__(self):
-        desc = f"node {self.n}: \n"
-        for child, dist in self.childs.items():
-            desc += f"\tchild {child.n} at distance {dist}\n"
-        return desc
+        return  f"N({self.n})"
 
 
 class uniLink:
@@ -80,7 +77,7 @@ class uniLink:
         self.activation = None
         self.length = None
 
-        # Graphical object to plot
+        # Related graphical objects
         self.line = None
     
     def __eq__(self, other):
@@ -122,33 +119,54 @@ class uniNetwork:
 
     def __init__(self, nodes):
 
-        self.nodes = {}  # Must be corrected: standard constructor does not work
-        self.links = {}
+        # Nodes are contained in a dictionary because are labelled
+        # but the insertion is not contiguous
+        self.nodes = ci.cdict(nodes)  # Must be corrected: standard constructor does not work
+        
+        # Links are contained in a set beacuse it really doesn't make sense
+        # to define an ordering of links
+        self.links = ci.cset() 
+
+        # Number of nodes
         self.N = None
 
+        # Descriptive matrices
         self._distanceM = None
         self.linkM = None
         self._targetM = None
         self._targetSM = None
 
-        # for display purposes
+        # Related graphical objects
         self.repr_dim = 2
         self.scatplot = None
 
-    def add_couple(self, nodes , distance):
+        # cnets parameters
+        self.is_cnet_initialized = False
 
-        self.linkM[nodes[0].n, nodes[1].n] = True
-        self.linkM[nodes[1].n, nodes[0].n] = True
-        self.links.add(nodes[0].connect(nodes[1], distance) )
-        self._targetM[nodes[0].n, nodes[1].n] = distance
-        self._targetM[nodes[1].n, nodes[0].n] = distance
+        # self.initialize_embedding(dim=2)
+    
+    def initialize_embedding(self,dim=2):
+        cnets.init_network(self.targetSM, self.values, dim)
+
+    def add_couple(self, node1, node2 , distance):
+
+        self.linkM[node1.n, node2.n] = True
+        self.linkM[node2.n, node1.n] = True
+
+        self._targetM[node1.n, node2.n] = distance
+        self._targetM[node2.n, node1.n] = distance
+
+        self.nodes += {node1.n:node1, node2.n:node2}
+
+        self.links += node1.connect(node2, distance) 
+        
 
     @classmethod
     def from_sparse(cls, sparse_matrix):
         """generates network from a sparse matrix"""
 
         # raw init
-        net = cls([])
+        net = cls({})
 
         net._targetSM = np.array(sparse_matrix)
         net.N = int(np.max(net._targetSM.transpose()[:2])) + 1
@@ -161,10 +179,11 @@ class uniNetwork:
         for i, j, distance in net.targetSM:
 
             i, j = int(i), int(j)
+            print(colored(f"{net.nodes}", 'green'))
 
-            node_in = net.nodes.get(i, Node(i))  # fetch from dict or create
-            node_out = net.nodes.get(j, Node(j))  # fetch from dict or create
-            net.add_couple((node_in, node_out), distance) # connect and add link to set
+            net.add_couple(net.nodes.get(i, Node(i)),
+                            net.nodes.get(j, Node(j)), 
+                            distance) # connect and add link to set
 
             print(f">> linked {i} to {j}", end="\r")
 
@@ -186,7 +205,7 @@ class uniNetwork:
             raise ValueError("Matrix has non-null diagonal")
 
         sparseM = utils.matrix_to_sparse(matrix)
-        net = Network.from_sparse(sparseM)
+        net = uniNetwork.from_sparse(sparseM)
         return net
 
     @classmethod
@@ -348,7 +367,7 @@ class uniNetwork:
         links = (M < connection_probability).astype(float)
         M = M * links * max_dist
 
-        return Network.from_adiacence(M)
+        return uniNetwork.from_adiacence(M)
 
     def __str__(self):
         """Describes the tree"""

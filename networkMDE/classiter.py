@@ -13,7 +13,8 @@ This module basically let this
 
     #prints [int1.attr, inst2.attr, inst3.attr]
 
-become possible
+become possible, while conserving (hopefully) most compatibility
+with other methods
 """
 
 
@@ -38,15 +39,24 @@ class citer:
         else:
             raise TypeError(f"clist type is already set to {self._type}")
 
+    def __getitem__(self, index):
+         return self.objs[index]
+    
+    def __setitem__(self, key, value):
+        self.objs[key] = value
+
     def __getattr__(self, attr_name):
-        return [ getattr(obj, attr_name) for obj in self.objs]
+        return clist([ getattr(obj, attr_name) for obj in self.objs])
 
     def __str__(self):
-        desc = self.__class__.citer_name + "["
+        desc = f"{self.__class__.citer_name} of {str(self.type)} ["
         for obj in self.objs:
             desc += f" {str(obj)} "
         desc += "]"
         return desc 
+    
+    def __len__(self):
+        return len(self.objs)
 
 class clist(citer):
 
@@ -72,10 +82,21 @@ class cdict(citer):
     def __getattr__(self, attr_name):
         return [ getattr(obj, attr_name) for obj in self.objs.values()]
     
-    def __iadd__(self, element):
+    def get(self, key, default=None):
+        return self.objs.get(key, default)
+    
+    def __iadd__(self, element):   
         for key, value in element.items():
+            self.type = type(value)
             self.objs[key] = value
         return self
+    
+    def __str__(self):
+        desc = f"{self.__class__.citer_name} of {str(self.type)} ["
+        for key, value in self.objs.items():
+            desc += f" {str(key)}:{str(value)} "
+        desc += "]"
+        return desc 
 
 class cset(citer):
 
@@ -83,6 +104,7 @@ class cset(citer):
 
     def __init__(self, objs=None):
         self.empty = set()
+        objs = set(objs) if objs is not None else objs
         super().__init__(objs)
     
     def __iadd__(self, element):

@@ -11,18 +11,18 @@ the mean of the initial values.
 
 import numpy as np
 import matplotlib.pyplot as plt
-from . import network as nw
-from . import netplot
+from networkMDE import network as nw
+from networkMDE import netplot
 
 from termcolor import colored
 from timeit import default_timer as time
 import cnets
 
 
-class propagateNet(nw.Network):
+class propagateNet(nw.uniNetwork):
     def __init__(self):
-        self.net = nw.Network.Random(20, 0.15)
-        self.net.init_positions(dim=2)
+        self.net = nw.uniNetwork.Random(20, 0.15)
+        self.net.initialize_embedding(dim=2)
 
         for node in self.net.nodes.values():
             node.value = 0  # np.random.randint(20)
