@@ -23,7 +23,7 @@ typedef struct sparserow
 
 typedef struct node
 {
-    long n;             // Node label
+    long n;   // Node label
     double value;       // Value of a general scalar quantity
     long childs_number;
     long * childs;
@@ -43,7 +43,7 @@ typedef struct graph
     long N_nodes;
     long N_links;
     Node * nodes;
-    int embedding_dimension;
+    long embedding_dimension;
 } Graph;
 
 // Global variables remain the same call after call

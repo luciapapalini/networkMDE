@@ -11,8 +11,8 @@ the mean of the initial values.
 
 import numpy as np
 import matplotlib.pyplot as plt
-import network as nw
-import netplot
+from . import network as nw
+from . import netplot
 
 from termcolor import colored
 from timeit import default_timer as time

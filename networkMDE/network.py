@@ -10,7 +10,7 @@ from termcolor import colored
 from tqdm import tqdm
 
 import cnets
-import utils
+from . import utils
 
 
 class Node:
@@ -74,16 +74,27 @@ class Node:
         return desc
 
 
-class Link:
-    """almost useless class, may remove it later
+class uniLink:
+    """Link class to handle unidirected links
 
-    Used only to make 1 -> 2 equal to 2 -> 1 like in 'set()' properties.
+    Implements an equivalence relationships between tuples:
 
+        L(1,2) ~ L(2,1)
+
+    this is done by a symmetric hash function and a __eq__ override.
     """
 
     def __init__(self, a, b):
         self.a = a
         self.b = b
+    
+    def __eq__(self, other):
+        identical = (self.a == other.a and self.b == other.b)
+        flipped = (self.a == other.b and self.b == other.a)
+        return identical or flipped
+    
+    def __ne__(self, other):
+        return (not self.__eq__(other))
 
     def __hash__(self):
         return hash((self.a + self.b) / (self.a + 1) / (self.b + 1))
