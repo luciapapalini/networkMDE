@@ -11,58 +11,44 @@ from tqdm import tqdm
 
 import cnets
 from . import utils
-
+from . import classiter as ci
 
 class Node:
-    def __init__(self, n):
-        self.n = int(n)
-        self.childs = {}
-        self.distances = {}
-        self.position = None
-        self._value = None  # the value of... something, I guess?
 
-        # add a list of lines connected for display purposes
-        self.lines = {}
-        self.synapsis = {}
+    def __init__(self, n):
+
+        self.n = int(n)
+        self.synapses = ci.cset()
+        self._position = None
+        self._value = None  # the value of... something, I guess?
 
     @property
     def value(self):
         if self._value is not None:
             return self._value
-        raise RuntimeWarning("node value not defined yet")
+        raise RuntimeWarning("Node value not defined yet")
 
     @value.setter
     def value(self, value):
-        self._value = value  # never used the word 'value' so much times in my life
+        self._value = value
+    
+    @property
+    def position(self):
+        if self._position is not None:
+            return self._position
+        raise RuntimeWarning("Node position not defined yet")
+
+    @position.setter
+    def position(self, position):
+        self._position = position
 
     def connect(self, child, distance):
+
         # connections are called one time for couple
-        self.childs[child] = distance
-        self.synapsis[child] = False
-
-        child.childs[self] = distance
-        child.synapsis[self] = False
-
-    def current_dist_from(self, child):
-        return np.sqrt(np.sum((self.position - child.position) ** 2))
-
-    def get_pulled_by_childs(self, epsilon):
-        """Gradient-based move for MDE
-
-        For the single node the loss function (difference from target distance)**2 is
-
-        L = sum_childs[ ( distance_from_child - target_distance_from_child)**2 ]
-
-        so  - grad (L) = 2 * sum_c[ (x - x_c)/|x - x_c| * ( |x - x_c| - target_dist) ]
-
-        """
-        delta = np.zeros(self.position.shape)
-        for child, target_dist in self.childs.items():
-            real_dist = self.current_dist_from(child)
-            delta += (1.0 - target_dist / real_dist) * (child.position - self.position)
-
-        delta *= epsilon / len(self.childs)
-        self.position += delta
+        link = uniLink(self, child)
+        self.synapses.add(link)
+        child.synapses.add(link)
+        return link
 
     def __hash__(self):
         return self.n
@@ -84,31 +70,61 @@ class uniLink:
     this is done by a symmetric hash function and a __eq__ override.
     """
 
-    def __init__(self, a, b):
-        self.a = a
-        self.b = b
+    def __init__(self, node1, node2):
+
+        # The linked nodes
+        self.node1 = node1
+        self.node2 = node2
+
+        # The value of activation of the link and its length
+        self.activation = None
+        self.length = None
+
+        # Graphical object to plot
+        self.line = None
     
     def __eq__(self, other):
-        identical = (self.a == other.a and self.b == other.b)
-        flipped = (self.a == other.b and self.b == other.a)
+        """Makes links that has the same vertices equal. """
+        identical = (self.node1 == other.node1 and self.node2 == other.node2)
+        flipped = (self.node1 == other.node2 and self.node2 == other.node1)
         return identical or flipped
     
     def __ne__(self, other):
         return (not self.__eq__(other))
 
     def __hash__(self):
-        return hash((self.a + self.b) / (self.a + 1) / (self.b + 1))
+        """Hash fucntion for dicts and sets.
+        
+        The function must be symmetric w.r.t. nodes, a possible choice is:
+
+            h(uniLink) = c ( h(node1)  + h(node2) )
+        
+        where c is a constant.
+
+        Since h(node) = node.n (integer) the number of collision is:
+
+            N_coll = n1 + n2 + 1
+
+        To avoid this the constant c is chosen like:
+            
+            c = 1/(1 + h1**2 )* 1/(1 + h2**2)
+        """
+        h1 , h2 = hash(self.node1), hash(self.node2)
+        return  hash((h1 + h2) / (h1**2 + 1) / (h2**2 + 1))
+    
+    def __str__(self):
+        return f'uL({self.node1.n},{self.node2.n})'
 
 
-class Network:
+class uniNetwork:
+    """Compositional class for describing networks.
+    """
+
     def __init__(self, nodes):
 
-        self.nodes = {}  # correct: stanndard constructor does not work
+        self.nodes = {}  # Must be corrected: standard constructor does not work
+        self.links = {}
         self.N = None
-        self.repr_dim = 2
-
-        # suggestion for the future: implement an iteration method (Dijkstra)
-        self.executed_paths = []
 
         self._distanceM = None
         self.linkM = None
@@ -116,10 +132,16 @@ class Network:
         self._targetSM = None
 
         # for display purposes
+        self.repr_dim = 2
         self.scatplot = None
 
-        # blow-the-glove max iterations
-        self.max_expansions = 70
+    def add_couple(self, nodes , distance):
+
+        self.linkM[nodes[0].n, nodes[1].n] = True
+        self.linkM[nodes[1].n, nodes[0].n] = True
+        self.links.add(nodes[0].connect(nodes[1], distance) )
+        self._targetM[nodes[0].n, nodes[1].n] = distance
+        self._targetM[nodes[1].n, nodes[0].n] = distance
 
     @classmethod
     def from_sparse(cls, sparse_matrix):
@@ -136,28 +158,17 @@ class Network:
 
         # gets a sparse matrix like (i,j) dist
         # and create nodes
-        links = {}
         for i, j, distance in net.targetSM:
 
             i, j = int(i), int(j)
 
             node_in = net.nodes.get(i, Node(i))  # fetch from dict or create
             node_out = net.nodes.get(j, Node(j))  # fetch from dict or create
-            node_in.connect(node_out, distance)  # connect
-            net.nodes[i] = node_in  # put back
-            net.nodes[j] = node_out  # put back
+            net.add_couple((node_in, node_out), distance) # connect and add link to set
 
             print(f">> linked {i} to {j}", end="\r")
 
-            net.linkM[i, j] = True
-            net.linkM[j, i] = True
-
-            net._targetM[i, j] = distance
-            net._targetM[j, i] = distance
-
-            links[hash(Link(i, j))] = distance  # pretty useless
-
-        print(f"Network has {len(net.nodes)} elements and {len(links)} links")
+        print(f"Network has {len(net.nodes)} elements and {len(net.links)} links")
         return net
 
     @classmethod
@@ -216,11 +227,6 @@ class Network:
 
             if not dense:
                 net_1.nodes[node_net_1].connect(net_2.nodes[node_net_2])
-
-    def init_positions(self, dim=2):
-        self.repr_dim = dim
-        for node in tqdm(self.nodes.values(), desc="position init", leave=False):
-            node.position = np.random.uniform(np.zeros((dim)), np.ones((dim)))
 
     @property
     def values(self):
@@ -292,77 +298,9 @@ class Network:
                 edges.append(np.vstack((node.position, child.position)).transpose())
         return np.array(edges)
 
-    def expand(self, epsilon):
-        """pushes all nodes away from all nodes,
-        so basically maximizes the distance of everything from everything"""
-        for node in self.nodes.values():
-            delta = np.zeros(self.repr_dim)
-            for anode in self.nodes.values():
-                if node is not anode:
-                    real_dist = node.current_dist_from(anode)
-                    delta -= (anode.position - node.position) / real_dist
-            delta *= epsilon
-            node.position += delta / self.N
-
-    def MDE(self, Nsteps=10, verbose=True):
-        """Minimal distortion embedding algorithm.
-
-        I have to be honest, it\'s just a pretty dumb and not supported strategy
-        I came out with.
-
-        Minimizes the discrepancy between the target distances and the
-        actual distances of the points by letting each node be pulled by its childs.
-
-        Also tries to spread apart loosely connected regions of the network, e.g.
-        the graph given by the sparse matrix:
-
-                        [[0,1, 1.], [0,2, 1.], [0,3, 1.]]
-
-        can be represented in two equivalent ways (with the same (null) distortion):
-
-                 repr 1                        repr 2
-
-                   1
-                   |
-                   0                          0 -- 1=2=3
-                  / \
-                 2   3
-
-        since the distances are respected. The second representation is by the way less clear
-        than the first.
-
-        To solve this the algorithm uses a blow-the-glove strategy: for a fixed
-        number of iterations each node repels each other, then the networks is relaxed by
-        child-pulling to the minimum distortion.
-        """
-        with tqdm(range(Nsteps), desc=f"MDE") as pbar:
-            for iteration in pbar:
-                if self.max_expansions > 0:
-                    self.expand(1.0)
-                    self.max_expansions -= 1
-
-                for node in self.nodes.values():
-                    node.get_pulled_by_childs(0.1)
-                pbar.set_description(f"MDE -- distortion {self.distortion :.2f}")
-
-        # ending: subtracts position of center of mass
-        X_cm = np.zeros(self.repr_dim)
-        for node in self.nodes.values():
-            X_cm += node.position / self.N
-
-        for node in self.nodes.values():
-            node.position -= X_cm
-
-        # sometimes the networks starts rotating (the optimal embedding is
-        # invariant under rotations) but since the particles are not respecting
-        # a dynamical law (no velocity that has memory of the past) I don't know
-        # how to stop this
-
     def cMDE(self, Nsteps=1000):
-
         cnets.MDE(0.1, Nsteps)
         positions = cnets.get_positions()
-
         for node, position in zip(self.nodes.values(), positions):
             node.position = np.array(position)
 
@@ -380,34 +318,6 @@ class Network:
                 print(colored(f"{M[i,j]:.2}", color, attrs=attrs), end="\t")
             print()
         print()
-
-    @classmethod
-    def Hexahedron(cls):
-        M = [
-            [0, 1, 1.0],
-            [1, 2, 1.0],
-            [2, 0, 1.0],
-            [3, 0, 1.0],
-            [3, 1, 1.0],
-            [3, 2, 1.0],
-            [4, 0, 1.0],
-            [4, 1, 1.0],
-            [4, 2, 1.0],
-        ]
-
-        return cls.from_sparse(M)
-
-    @classmethod
-    def Line(cls, n):
-        M = []
-        for i in range(n):
-            M.append([i, i + 1, 1.0])
-        return cls.from_sparse(M)
-
-    @classmethod
-    def Triangle(cls):
-        M = [[0, 1, 1.0], [1, 2, 1.0], [2, 0, 1.0]]
-        return cls.from_sparse(M)
 
     @classmethod
     def Random(cls, number_of_nodes, connection_probability, max_dist=1.0):
