@@ -23,7 +23,7 @@ typedef struct sparserow
 
 typedef struct node
 {
-    long n;             // Node label
+    long n;   // Node label
     double value;       // Value of a general scalar quantity
     long childs_number;
     long * childs;
@@ -31,6 +31,8 @@ typedef struct node
     double * position; // Position in the embedding
 } Node;
 
+// Link structure is useless at the moment,
+// may bind it to Linkin python later
 typedef struct link
 {
     Node * node1;
@@ -49,11 +51,17 @@ typedef struct graph
 // Global variables remain the same call after call
 Graph G;
 
+// Link nodes in the Graph
 void link_nodes(Node * node, long child_index, double distance){
 
     // Adds label of child to child array
     long * new_childs = (long *) malloc(sizeof(long)*((*node).childs_number + 1));
-    for (long k = 0; k < node -> childs_number; k++)
+    if (new_childs == NULL)
+    {
+        printf("!!! cannot allocate memory !!!\n");
+        exit(-1);
+    }
+    for (long k = 0; k < (node -> childs_number); k++)
     {
         if (node -> childs_number != 0)
         {
@@ -77,10 +85,15 @@ void link_nodes(Node * node, long child_index, double distance){
 }
 
 Graph to_Net(SparseRow * SM, double * values, long N_elements, long N_links){
-
+    printf("cnets - to_Net - ALLOC\n");
     Graph g;
     g.nodes = (Node *) malloc(sizeof(Node)*N_elements);
-
+    if (g.nodes == NULL)
+    {
+        printf("!!! cannot allocate memory for %ld nodes !!!\n", N_elements);
+        exit(-1);
+    }
+    printf("cnets - to_Net - ASSIGN\n");
     // Values assignment
     for (long k = 0; k < N_elements; k++)
     {
@@ -89,16 +102,16 @@ Graph to_Net(SparseRow * SM, double * values, long N_elements, long N_links){
         g.nodes[k].childs_number = 0;
     }
 
+    printf("cnets - to_Net - LINK\n");
     // Linking
     for (long k = 0; k < N_links; k++)
     {
         link_nodes(&(g.nodes[SM[k].i]), SM[k].j, SM[k].d);
         link_nodes(&(g.nodes[SM[k].j]), SM[k].i, SM[k].d);
     }
-
+    printf("cnets - to_Net - NEl&NLi\n");
     g.N_nodes = N_elements;
     g.N_links = N_links;
-
     return g;
 }
 
@@ -144,6 +157,7 @@ void random_init(){
 
 }
 
+// Python enters here first 90% of the time
 PyObject * init_network(PyObject * self, PyObject * args){
 
     // The PyObjs for the two lists
@@ -161,6 +175,11 @@ PyObject * init_network(PyObject * self, PyObject * args){
 
     long N_elements = (long) PyList_Size(Pvalues);
     long N_links = (long) PyList_Size(Psparse);
+    if (N_links < 1 ||  N_elements < 2)
+    {
+        printf("cnets - invalid network G = (%ld, %ld)\n", N_elements, N_links);
+        exit(2);
+    }
     printf("cnets - N_element & N_links stage passed\n");
 
     // Convert each element of the lists into a valid element of the C-object
@@ -179,13 +198,12 @@ PyObject * init_network(PyObject * self, PyObject * args){
     Py_RETURN_NONE;
 }
 
-double distance(double * pos1, double * pos2, int N){
+double distance(double * pos1, double * pos2, int dim){
 
     double dist = 0.;
-    for (int i = 0; i < N; i++)
+    for (int i = 0; i < dim; i++)
     {
         dist += pow(pos1[i] - pos2[i], 2);
-        //printf("\t pos1[i] = %lf, pos2[i] = %lf, dist = %lf\n",pos1[i],pos2[i], dist);
     }
     return sqrt(dist);
 }
@@ -221,7 +239,7 @@ PyObject * MDE(PyObject * self, PyObject * args){
             }
         }
     }
-    printf("\nMDE end\n");
+    printf("\ncnets - MDE end\n");
     Py_RETURN_NONE;
 }
 
@@ -239,6 +257,35 @@ PyObject * get_positions(PyObject * self, PyObject * args){
     return list;
 }
 
+PyObject * get_distanceSM(PyObject * self, PyObject * args){
+
+    PyObject * distanceSM = PyList_New(G.N_nodes*G.N_nodes);
+    double d;
+    int row_index = 0;
+    Node node, another_node;
+
+    for (int node_index = 0; node_index < G.N_nodes; node_index++)
+    {   
+        for (int another_node_index = 0; another_node_index < G.N_nodes; another_node_index++)
+        {   
+            PyObject * row = PyList_New(3);
+
+            node = G.nodes[node_index];
+            another_node = G.nodes[another_node_index];
+
+            d = distance(node.position, another_node.position, G.embedding_dimension);
+            PyList_SetItem(row, 0, PyLong_FromLong(node.n));
+            PyList_SetItem(row, 1, PyLong_FromLong(another_node.n));
+            PyList_SetItem(row, 2, PyFloat_FromDouble(d));
+
+            PyList_SetItem(distanceSM, row_index, row);
+            row_index ++;
+        }
+        
+    }
+    return distanceSM;
+}
+
 // Python link part - follow the API
 
 // Methods table definition
@@ -246,6 +293,7 @@ static PyMethodDef cnetsMethods[] = {
     {"init_network", init_network, METH_VARARGS, "Initializes the network given a sparse list and a list of values"},
     {"MDE", MDE, METH_VARARGS, "Executes minumum distortion embedding routine"},
     {"get_positions", get_positions, METH_VARARGS, "Gives the computed positions of the network"},
+    {"get_distanceSM", get_distanceSM, METH_VARARGS, "Returns the computed distance sparse matrix"},
     {NULL, NULL, 0, NULL}//Guardian of The Table
 };
 

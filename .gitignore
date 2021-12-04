@@ -3,6 +3,9 @@
 *.gif
 extension_test/
 *.exe
+.vscode/
+ignore/
+
 
 !assets/*.gif
 

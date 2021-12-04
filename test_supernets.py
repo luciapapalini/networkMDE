@@ -11,34 +11,29 @@ the mean of the initial values.
 
 import numpy as np
 import matplotlib.pyplot as plt
-import network as nw
-import netplot
+from networkMDE import network as nw
+from networkMDE import netplot
 
 from termcolor import colored
 from timeit import default_timer as time
-import cnets
 
 
-class propagateNet(nw.Network):
+class propagateNet(nw.uniNetwork):
     def __init__(self):
-        self.net = nw.Network.Random(20, 0.15)
-        self.net.init_positions(dim=2)
-
-        for node in self.net.nodes.values():
-            node.value = 0  # np.random.randint(20)
-
+        self.net = nw.uniNetwork.Random(5000, .08)
+        for link in self.net.nodes[0].synapses:
+            link.length = .4
+        self.net.update_target_matrix()
         self.net.nodes[0].value = 11
 
-        self.net.max_expansion = 0
-
-        cnets.init_network(self.net.targetSM, self.net.values, self.net.repr_dim)
+        self.net.initialize_embedding(dim=2)
         self.net.cMDE(Nsteps=1000)
 
         self.updated_times = 0
 
     def apple_game(self, verbose=False):
 
-        for node in self.net.nodes.values():
+        for node in self.net:
             Ztot = np.sum(1.0 / np.array(list(node.childs.values())))
             if verbose:
                 print(
@@ -85,7 +80,6 @@ A = propagateNet()
 
 # animation = netplot.animate_super_network(A, A.update,
 #                                            frames=150, interval=60, blit=True)
-netplot.scat_kwargs["alpha"] = 0.2
 netplot.plot_net(A.net)
 # animation.save('random_2d.gif',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}', end='\r'), dpi=80)
 plt.show()
