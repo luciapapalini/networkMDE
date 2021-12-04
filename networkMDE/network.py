@@ -13,8 +13,8 @@ import cnets
 from . import utils
 from . import classiter as ci
 
-class Node:
 
+class Node:
     def __init__(self, n):
 
         self.n = int(n)
@@ -31,7 +31,7 @@ class Node:
     @value.setter
     def value(self, value):
         self._value = value
-    
+
     @property
     def position(self):
         if self._position is not None:
@@ -55,7 +55,7 @@ class Node:
         return self.n
 
     def __str__(self):
-        return  f"N({self.n})"
+        return f"N({self.n})"
 
 
 class uniLink:
@@ -80,23 +80,31 @@ class uniLink:
 
         # Related graphical objects
         self.line = None
-    
+
+    def get_other_extremum(self, node):
+        if node == self.node1:
+            return self.node2
+        elif node == self.node2:
+            return self.node1
+        else:
+            raise ValueError(f"This synapsis has no extremum {node}")
+
     def __eq__(self, other):
-        """Makes links that has the same vertices equal. """
-        identical = (self.node1 == other.node1 and self.node2 == other.node2)
-        flipped = (self.node1 == other.node2 and self.node2 == other.node1)
+        """Makes links that has the same vertices equal."""
+        identical = self.node1 == other.node1 and self.node2 == other.node2
+        flipped = self.node1 == other.node2 and self.node2 == other.node1
         return identical or flipped
-    
+
     def __ne__(self, other):
-        return (not self.__eq__(other))
+        return not self.__eq__(other)
 
     def __hash__(self):
-        """Hash fucntion for dicts and sets.
-        
+        """Hash function for dicts and sets.
+
         The function must be symmetric w.r.t. nodes, a possible choice is:
 
             h(uniLink) = c ( h(node1)  + h(node2) )
-        
+
         where c is a constant.
 
         Since h(node) = node.n (integer) the number of collision is:
@@ -104,29 +112,28 @@ class uniLink:
             N_coll = n1 + n2 + 1
 
         To avoid this the constant c is chosen like:
-            
+
             c = 1/(1 + h1**2 )* 1/(1 + h2**2)
         """
-        h1 , h2 = hash(self.node1), hash(self.node2)
-        return  hash((h1 + h2) / (h1**2 + 1) / (h2**2 + 1))
-    
+        h1, h2 = hash(self.node1), hash(self.node2)
+        return hash((h1 + h2) / (h1 ** 2 + 1) / (h2 ** 2 + 1))
+
     def __str__(self):
-        return f'uL({self.node1.n},{self.node2.n})'
+        return f"uL({self.node1.n},{self.node2.n})"
 
 
 class uniNetwork:
-    """Compositional class for describing networks.
-    """
+    """Compositional class for describing networks."""
 
     def __init__(self, nodes):
 
         # Nodes are contained in a dictionary because are labelled
         # but the insertion is not contiguous
-        self.nodes = ci.cdict(nodes)  # Must be corrected: standard constructor does not work
-        
+        self.nodes = ci.cdict(nodes)  # TODO: standard constructor does not work
+
         # Links are contained in a set beacuse it really doesn't make sense
         # to define an ordering of links
-        self.links = ci.cset() 
+        self.links = ci.cset()
 
         # Number of nodes
         self.N = None
@@ -145,12 +152,13 @@ class uniNetwork:
         self.is_cnet_initialized = False
 
         # self.initialize_embedding(dim=2)
-    
-    def initialize_embedding(self,dim=2):
-        cnets.init_network(self.targetSM, self.nodes.value, dim)
+
+    def initialize_embedding(self, dim=2):
+        cnets.init_network(self.targetSM, list(self.nodes.value), dim)
+        self.repr_dim = dim
         self.is_cnet_initialized = True
 
-    def add_couple(self, node1, node2 , distance):
+    def add_couple(self, node1, node2, distance):
 
         self.linkM[node1.n, node2.n] = True
         self.linkM[node2.n, node1.n] = True
@@ -158,9 +166,8 @@ class uniNetwork:
         self._targetM[node1.n, node2.n] = distance
         self._targetM[node2.n, node1.n] = distance
 
-        self.nodes += {node1.n:node1, node2.n:node2}
-        self.links += node1.connect(node2, distance) 
-        
+        self.nodes += {node1.n: node1, node2.n: node2}
+        self.links += node1.connect(node2, distance)
 
     @classmethod
     def from_sparse(cls, sparse_matrix):
@@ -177,14 +184,14 @@ class uniNetwork:
 
         # gets a sparse matrix like (i,j) dist
         # and create nodes
-        print("Linking..                  ", end = '\r')
+        print("Linking..                  ", end="\r")
         for i, j, distance in net.targetSM:
 
             i, j = int(i), int(j)
 
-            net.add_couple(net.nodes.get(i, Node(i)),
-                            net.nodes.get(j, Node(j)), 
-                            distance) # connect and add link to set
+            net.add_couple(
+                net.nodes.get(i, Node(i)), net.nodes.get(j, Node(j)), distance
+            )  # connect and add link to set
 
         print(f"Network has {len(net.nodes)} elements and {len(net.links)} links")
         return net
@@ -207,50 +214,11 @@ class uniNetwork:
         net = uniNetwork.from_sparse(sparseM)
         return net
 
-    @classmethod
-    def connect(cls, networks, links, distances):
-        """connects two networks.
-
-        Args
-        ----
-            networks : tuple
-                a tuple of networks to connect.
-
-            links : list of 2-tuples
-                links (net1_node_a, net2_node_b). -1 stands for densely connected.
-
-                e.g, (5, -1) connects every element of net2 to element 5 of net1.
-        """
-        raise NotImplementedError("I have to finish this")
-        net_1, net_2 = networks
-        # first shifts every number of the second network
-        for N2node in net_2.nodes.values():
-            N2node.n += net_1.N
-
-        for link in links:
-
-            node_1, node_2 = link
-            node_2 += net_1.N
-            dense = False
-
-            if node_1 == -1:
-                for node in net_1.nodes.values():
-                    node.connect(net_2.nodes[node_2])
-                dense = True
-
-            if node_1 == -1:
-                for node in net_2.nodes.values():
-                    node.connect(net_1.nodes[node_1])
-                dense = True
-
-            if not dense:
-                net_1.nodes[node_net_1].connect(net_2.nodes[node_net_2])
-
     @property
     def distanceM(self):
         self._distanceM = np.zeros((self.N, self.N))
-        for node in self.nodes.values():
-            for another_node in self.nodes.values():
+        for node in self.nodes:
+            for another_node in self.nodes:
                 self._distanceM[node.n, another_node.n] = np.sqrt(
                     np.sum((node.position - another_node.position) ** 2)
                 )
@@ -284,6 +252,10 @@ class uniNetwork:
             list.append([int(i), int(j), d])
         return list
 
+    @targetSM.setter
+    def targetSM(self, value):
+        self._targetSM = value
+
     @property
     def distortion(self):
         return np.sum(
@@ -297,12 +269,12 @@ class uniNetwork:
             node.position = np.array(position)
 
     def to_scatter(self):
-        return np.array(self.nodes.position).transpose()
+        return np.array(list(self.nodes.position)).transpose()
 
     def print_distanceM(self, target=False):
         M = self._targetM if target else self.distanceM
         title = "Target matrix" if target else "Current matrix "
-        print(title + (30 - len(title)) * "-" + f"(D = {self.distortion:.1e})")
+        print(title + 30 * "-")
         for i in range(self.N):
             for j in range(self.N):
                 color = "green" if self.linkM[i, j] else "red"
@@ -310,6 +282,14 @@ class uniNetwork:
                 print(colored(f"{M[i,j]:.2}", color, attrs=attrs), end="\t")
             print()
         print()
+
+    def update_target_matrix(self):
+        for node in self.nodes:
+            for link in node.synapses:
+                other = link.get_other_extremum(node)
+                self._targetM[node.n, other.n] = link.length
+                self._targetM[other.n, node.n] = link.length
+        self.targetSM = utils.matrix_to_sparse(self.targetM)
 
     @classmethod
     def Random(cls, number_of_nodes, connection_probability, max_dist=1.0):
@@ -341,13 +321,13 @@ class uniNetwork:
         M = M * links * max_dist
 
         return uniNetwork.from_adiacence(M)
-    
+
     def __iter__(self):
         self.i = 0
         return self
-    
+
     def __next__(self):
-        if self.i > self.N-1:
+        if self.i > self.N - 1:
             raise StopIteration
         self.i += 1
         return self.nodes[self.i - 1]

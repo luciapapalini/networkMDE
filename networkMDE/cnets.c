@@ -56,7 +56,12 @@ void link_nodes(Node * node, long child_index, double distance){
 
     // Adds label of child to child array
     long * new_childs = (long *) malloc(sizeof(long)*((*node).childs_number + 1));
-    for (long k = 0; k < node -> childs_number; k++)
+    if (new_childs == NULL)
+    {
+        printf("!!! cannot allocate memory !!!\n");
+        exit(-1);
+    }
+    for (long k = 0; k < (node -> childs_number); k++)
     {
         if (node -> childs_number != 0)
         {
@@ -80,10 +85,15 @@ void link_nodes(Node * node, long child_index, double distance){
 }
 
 Graph to_Net(SparseRow * SM, double * values, long N_elements, long N_links){
-
+    printf("cnets - to_Net - ALLOC\n");
     Graph g;
     g.nodes = (Node *) malloc(sizeof(Node)*N_elements);
-
+    if (g.nodes == NULL)
+    {
+        printf("!!! cannot allocate memory for %ld nodes !!!\n", N_elements);
+        exit(-1);
+    }
+    printf("cnets - to_Net - ASSIGN\n");
     // Values assignment
     for (long k = 0; k < N_elements; k++)
     {
@@ -92,16 +102,16 @@ Graph to_Net(SparseRow * SM, double * values, long N_elements, long N_links){
         g.nodes[k].childs_number = 0;
     }
 
+    printf("cnets - to_Net - LINK\n");
     // Linking
     for (long k = 0; k < N_links; k++)
     {
         link_nodes(&(g.nodes[SM[k].i]), SM[k].j, SM[k].d);
         link_nodes(&(g.nodes[SM[k].j]), SM[k].i, SM[k].d);
     }
-
+    printf("cnets - to_Net - NEl&NLi\n");
     g.N_nodes = N_elements;
     g.N_links = N_links;
-
     return g;
 }
 
@@ -147,6 +157,7 @@ void random_init(){
 
 }
 
+// Python enters here first 90% of the time
 PyObject * init_network(PyObject * self, PyObject * args){
 
     // The PyObjs for the two lists
@@ -164,6 +175,11 @@ PyObject * init_network(PyObject * self, PyObject * args){
 
     long N_elements = (long) PyList_Size(Pvalues);
     long N_links = (long) PyList_Size(Psparse);
+    if (N_links < 1 ||  N_elements < 2)
+    {
+        printf("cnets - invalid network G = (%ld, %ld)\n", N_elements, N_links);
+        exit(2);
+    }
     printf("cnets - N_element & N_links stage passed\n");
 
     // Convert each element of the lists into a valid element of the C-object

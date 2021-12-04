@@ -16,15 +16,17 @@ from networkMDE import netplot
 
 from termcolor import colored
 from timeit import default_timer as time
-import cnets
 
 
 class propagateNet(nw.uniNetwork):
     def __init__(self):
-        self.net = nw.uniNetwork.Random(3000, 0.15)
-        self.net.initialize_embedding(dim=2)
-
+        self.net = nw.uniNetwork.Random(5000, .08)
+        for link in self.net.nodes[0].synapses:
+            link.length = .4
+        self.net.update_target_matrix()
         self.net.nodes[0].value = 11
+
+        self.net.initialize_embedding(dim=2)
         self.net.cMDE(Nsteps=1000)
 
         self.updated_times = 0
@@ -78,7 +80,6 @@ A = propagateNet()
 
 # animation = netplot.animate_super_network(A, A.update,
 #                                            frames=150, interval=60, blit=True)
-netplot.scat_kwargs["alpha"] = 0.2
 netplot.plot_net(A.net)
 # animation.save('random_2d.gif',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}', end='\r'), dpi=80)
 plt.show()

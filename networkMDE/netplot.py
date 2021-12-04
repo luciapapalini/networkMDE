@@ -1,18 +1,15 @@
-"""Graphic module for networks.
-Most things are not elegant/efficient, in my defense I have to say
-that matplotlib has the most strange way to manage Path3Dcollections and Line3D.
+"""Graphic module for plotting and animating networks.
 """
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib.colors import hsv_to_rgb
 
-# import network
-
 # Default setttings for plots
 fig_kwargs = {"figsize": (4, 4)}
-scat_kwargs = {"cmap": "plasma", "s": 50, "alpha": 1.0}
-line_kwargs = {"color": "k", "alpha": 0.3, "lw": 0.1}
+scat_kwargs = {"cmap": "viridis", "s": 20, "alpha": 1}
+line_kwargs = {"color": "k", "alpha": 1, "lw": 0.1}
+
 
 def get_graphics(net):
     """Generates the figure, axis and empty scatterplot/lines for the net."""
@@ -41,13 +38,12 @@ def get_graphics(net):
         (line,) = ax.plot(*empty, **line_kwargs)
         link.line = line
         artists += (line,)
-    
+
     return fig, ax
 
 
 def update_scatter(ax, net, colors, normalize_colors=True):
-    """Updates the scatter plot position and colors
-    """
+    """Updates the scatter plot position and colors"""
 
     position = net.to_scatter()
     scat = net.scatplot
@@ -64,7 +60,11 @@ def update_scatter(ax, net, colors, normalize_colors=True):
 
     position_on_plane = tuple(np.vstack((x_coord, y_coord)).transpose())
     scat.set_offsets(position_on_plane)
+    if ax.name == "3d":
+        scat.set_3d_properties(z_coord, "z")
+        ax.set_zlim((np.min(z_coord), np.max(z_coord)))
 
+    # Set padding
     min_, max_ = np.min(x_coord), np.max(x_coord)
     min_, max_ = min_ - 0.1 * (max_ - min_), max_ + 0.1 * (max_ - min_)
     ax.set_xlim((min_, max_))
@@ -72,10 +72,6 @@ def update_scatter(ax, net, colors, normalize_colors=True):
     min_, max_ = np.min(y_coord), np.max(y_coord)
     min_, max_ = min_ - 0.1 * (max_ - min_), max_ + 0.1 * (max_ - min_)
     ax.set_ylim((min_, max_))
-
-    if ax.name == "3d":
-        scat.set_3d_properties(z_coord, "z")
-        ax.set_zlim((np.min(z_coord), np.max(z_coord)))
 
     # colors
     scat.set_array(np.array(colors))
@@ -85,8 +81,7 @@ def update_scatter(ax, net, colors, normalize_colors=True):
 
 
 def update_lines(ax, net, colors, alphas):
-    """updates the lines of the network
-    """
+    """updates the lines of the network"""
     for link, color, alpha in zip(net.links, colors, alphas):
 
         line_data = np.vstack((link.node1.position, link.node2.position)).transpose()
@@ -111,7 +106,7 @@ def animate_super_network(super_net, super_net_function, **anim_kwargs):
     ----
         The update function can include an MDE update on position
     """
-    raise NotImplementedError('must be made compatible with classiter')
+    raise NotImplementedError("must be made compatible with classiter")
     fig, ax, (scat, *lines) = get_graphics(super_net.net)
 
     def _update_graphics(_):
@@ -140,14 +135,14 @@ def animate_super_network(super_net, super_net_function, **anim_kwargs):
 
 def plot_net(net):
     """Plots a statical image for the network embedding"""
-    
+
     _, ax = get_graphics(net)
 
     activations = net.links.activation
     point_colors = net.nodes.value
 
     line_colors = np.array([hsv_to_rgb((0.0, 1.0, a)) for a in activations])
-    line_alpha = [0.2 + 0.8 * a for a in activations]
+    line_alpha = [1 for a in activations]  # [0.2 + 0.8 * a for a in activations]
 
     update_scatter(ax, net, point_colors)
     update_lines(ax, net, line_colors, line_alpha)
