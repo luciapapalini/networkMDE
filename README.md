@@ -4,7 +4,7 @@ This repository aims to implement some **network embedding algorithms** (MDE, t-
 At the moment it represents just **a workbech for my personal coding skills**.
 
 ## Overview
-Most of the code is written in python3 but I had to resort to **extending  with C** for the most resource-expensive tasks.
+Most of the code is written in python3 but I had to resort to **extend with C** for the most resource-expensive tasks, even if I'm considering using cython.
 
 The conceptual points of greater interest for me are:
 
