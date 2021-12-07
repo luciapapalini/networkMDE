@@ -17,69 +17,70 @@ from networkMDE import netplot
 from termcolor import colored
 from timeit import default_timer as time
 
+import cnets
+
 
 class propagateNet(nw.uniNetwork):
     def __init__(self):
-        self.net = nw.uniNetwork.Random(5000, .08)
+        np.random.seed(31121997)
+        cnets.set_seed(31121997)
+        self.net = nw.uniNetwork.Random(30, .2)
+        print(self.net.nodes[0].synapses)
         for link in self.net.nodes[0].synapses:
-            link.length = .4
+            link.length = np.float64(.8) # must be done using numpy types
         self.net.update_target_matrix()
         self.net.nodes[0].value = 11
 
         self.net.initialize_embedding(dim=2)
-        self.net.cMDE(Nsteps=1000)
+        # self.net.cMDE(Nsteps=1000)
 
         self.updated_times = 0
 
-    def apple_game(self, verbose=False):
+    def apple_game(self):
+        """Toy model for saturation of a market.
+        
+        The length of the link says how prone is the seller to sell to the buyer
+        (shorter = more prone).
 
-        for node in self.net:
-            Ztot = np.sum(1.0 / np.array(list(node.childs.values())))
-            if verbose:
-                print(
-                    f"epoch:{self.updated_times} node {node.n}: v = {node.value} --- Ztot = {Ztot : .3f}"
-                )
-            for child, dist in node.childs.items():
-                p = 1.0 / (dist * Ztot)
-                if verbose:
-                    print(
-                        f"\tchild {child.n : 3}: v = {child.value} --- p = {p : .2f}",
-                        end="\t--> ",
-                    )
-                if True:
-                    if verbose:
-                        print(colored("transaction possible", "blue"), end="\t--> ")
+        At the beginning one marketer has all the benefits, then the selling starts.
+        """
+        if self.updated_times < 100:
+            for node in self.net:
+                Ztot = np.sum(1./np.array(list(node.synapses.length))) # classiter at work
+                p_sum = 0
+                for link in node.synapses:
+                    child = link.get_child(node)
+                    p = 1.0/np.array(link.length)/Ztot
                     if np.random.uniform(0, 1) < p:
-                        if verbose:
-                            print(colored("apple given", "green"))
                         child.value += 1
                         node.value -= 1
-                        node.synapsis[child] = True
-
-                        # synapsis enhancement/ distance reduction
-                        node.childs[child] = node.childs[child] * 0.9
+                        link.activation = p
+                        link.length *= 1./link.length + p*(1.-1./link.length)   # synapsis enhancement/ distance reduction
+                        
                     else:
-                        node.synapsis[child] = False
-                        if verbose:
-                            print(colored("apple not given", "red"))
-                else:
-                    node.synapsis[child] = False
-                    if verbose:
-                        print(colored("transaction impossible", "red"))
+                        link.activation = np.float64(0.)
+        if self.updated_times == 100:
+            for link in self.net.links:
+                link.activation = np.float64(0)
+
+        self.net.update_target_matrix()
+        cnets.set_target(self.net.targetSM)
+        self.updated_times += 1
+        print(colored(f"updated times: {self.updated_times}","blue"))
+
 
     def update(self, verbose=False):
         if int(self.updated_times) % 5 == 0:
             self.apple_game()
-            self.net.expand(0.01)
-        self.net.cMDE(Nsteps=50)
+        self.net.cMDE(step=0.01,Nsteps=50)
         self.updated_times += 1
 
 
 A = propagateNet()
 # A.net.print_distanceM()
-
-# animation = netplot.animate_super_network(A, A.update,
-#                                            frames=150, interval=60, blit=True)
-netplot.plot_net(A.net)
-# animation.save('random_2d.gif',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}', end='\r'), dpi=80)
+# netplot.plot_lines = False
+animation = netplot.animate_super_network(A, A.update,
+                                            frames=200, interval=60, blit=False)
+# netplot.plot_net(A.net)
+animation.save('cnetsa.gif',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}', end='\r'), dpi=80)
 plt.show()

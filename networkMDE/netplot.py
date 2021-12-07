@@ -6,9 +6,10 @@ import matplotlib.animation as animation
 from matplotlib.colors import hsv_to_rgb
 
 # Default setttings for plots
-fig_kwargs = {"figsize": (4, 4)}
-scat_kwargs = {"cmap": "viridis", "s": 20, "alpha": 1}
-line_kwargs = {"color": "k", "alpha": 1, "lw": 0.1}
+fig_kwargs = {"figsize": (3, 3)}
+scat_kwargs = {"cmap": "plasma", "s": 20, "alpha": 1}
+line_kwargs = {"color": "k", "alpha": 1, "lw": 0.8}
+plot_lines = True
 
 
 def get_graphics(net):
@@ -106,26 +107,23 @@ def animate_super_network(super_net, super_net_function, **anim_kwargs):
     ----
         The update function can include an MDE update on position
     """
-    raise NotImplementedError("must be made compatible with classiter")
-    fig, ax, (scat, *lines) = get_graphics(super_net.net)
+    fig, ax = get_graphics(super_net.net)
 
     def _update_graphics(_):
 
         super_net_function()
-        positions = super_net.net.to_scatter()
-        values = super_net.net.values
-        activations = super_net.net.activations
 
-        point_colors = values
-        line_colors = np.array([hsv_to_rgb((0.0, 1.0, a)) for a in activations])
-        line_alpha = [0.2 + 0.8 * a for a in activations]
+        activations = super_net.net.links.activation
 
-        line_data = super_net.net.edges_as_couples()
+        point_colors = super_net.net.nodes.value
+        line_colors = np.array([hsv_to_rgb((.25, 1.0, a)) for a in activations])
+        line_alpha = [0.2 + 0.8*a for a in activations]
 
-        update_scatter(ax, scat, positions, point_colors)
-        update_lines(ax, tuple(lines), line_data, line_colors, line_alpha)
+        update_scatter(ax, super_net.net, point_colors)
+        if plot_lines:
+            update_lines(ax, super_net.net, line_colors, line_alpha)
 
-        return (scat,) + tuple(lines)
+        return (super_net.net.scatplot,) + tuple(super_net.net.links.line)
 
     super_net.net.animation = animation.FuncAnimation(
         fig, _update_graphics, **anim_kwargs
@@ -139,8 +137,8 @@ def plot_net(net):
     _, ax = get_graphics(net)
 
     activations = net.links.activation
-    point_colors = net.nodes.value
 
+    point_colors = net.nodes.value
     line_colors = np.array([hsv_to_rgb((0.0, 1.0, a)) for a in activations])
     line_alpha = [1 for a in activations]  # [0.2 + 0.8 * a for a in activations]
 

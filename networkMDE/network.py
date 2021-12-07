@@ -81,7 +81,7 @@ class uniLink:
         # Related graphical objects
         self.line = None
 
-    def get_other_extremum(self, node):
+    def get_child(self, node):
         if node == self.node1:
             return self.node2
         elif node == self.node2:
@@ -119,7 +119,7 @@ class uniLink:
         return hash((h1 + h2) / (h1 ** 2 + 1) / (h2 ** 2 + 1))
 
     def __str__(self):
-        return f"uL({self.node1.n},{self.node2.n})"
+        return f"uL({self.node1.n}<->{self.node2.n}:{self.length:1.2f})"
 
 
 class uniNetwork:
@@ -262,8 +262,8 @@ class uniNetwork:
             ((self._targetM - self.distanceM) * self.linkM.astype(np.float64)) ** 2
         )
 
-    def cMDE(self, Nsteps=1000):
-        cnets.MDE(0.1, Nsteps)
+    def cMDE(self,step=0.1, Nsteps=1000):
+        cnets.MDE(step, Nsteps)
         positions = cnets.get_positions()
         for node, position in zip(self, positions):
             node.position = np.array(position)
@@ -284,9 +284,10 @@ class uniNetwork:
         print()
 
     def update_target_matrix(self):
+        print("Pynet - updating targets")
         for node in self.nodes:
             for link in node.synapses:
-                other = link.get_other_extremum(node)
+                other = link.get_child(node)
                 self._targetM[node.n, other.n] = link.length
                 self._targetM[other.n, node.n] = link.length
         self.targetSM = utils.matrix_to_sparse(self.targetM)
