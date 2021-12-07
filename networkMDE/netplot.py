@@ -6,9 +6,9 @@ import matplotlib.animation as animation
 from matplotlib.colors import hsv_to_rgb
 
 # Default setttings for plots
-fig_kwargs = {"figsize": (3, 3)}
-scat_kwargs = {"cmap": "plasma", "s": 20, "alpha": 1}
-line_kwargs = {"color": "k", "alpha": 1, "lw": 0.8}
+fig_kwargs = {"figsize": (5, 5)}
+scat_kwargs = {"cmap": "viridis", "s": 30, "alpha": 1}
+line_kwargs = {"color": "k", "alpha": 1, "lw": 0.4}
 plot_lines = True
 
 
@@ -33,12 +33,13 @@ def get_graphics(net):
     net.scatplot = ax.scatter(*empty, **scat_kwargs)
     artists = (net.scatplot,)
 
-    for link in net.links:
-        # line_data = np.vstack((link.node1.position, link.node2.position)).transpose()
-        # line, = ax.plot(*line_data, color='k', alpha=0.3)
-        (line,) = ax.plot(*empty, **line_kwargs)
-        link.line = line
-        artists += (line,)
+    if plot_lines:
+        for link in net.links:
+            # line_data = np.vstack((link.node1.position, link.node2.position)).transpose()
+            # line, = ax.plot(*line_data, color='k', alpha=0.3)
+            (line,) = ax.plot(*empty, **line_kwargs)
+            link.line = line
+            artists += (line,)
 
     return fig, ax
 
@@ -133,20 +134,27 @@ def animate_super_network(super_net, super_net_function, **anim_kwargs):
 
 def plot_net(net):
     """Plots a statical image for the network embedding"""
-
+    print("Plot started:")
+    print("Getting graphics..", end = '',flush=True)
     _, ax = get_graphics(net)
+    print("\tDone.")
 
     activations = net.links.activation
 
     point_colors = net.nodes.value
     line_colors = np.array([hsv_to_rgb((0.0, 1.0, a)) for a in activations])
-    line_alpha = [1 for a in activations]  # [0.2 + 0.8 * a for a in activations]
+    line_alpha = [0.2 + 0.8*a for a in activations]  # [0.2 + 0.8 * a for a in activations]
 
+    print("Updating scatter..", end = '',flush=True)
     update_scatter(ax, net, point_colors)
-    update_lines(ax, net, line_colors, line_alpha)
+    print("\tDone.")
+
+    if plot_lines:
+        print("Updating lines..", end = '',flush=True)
+        update_lines(ax, net, line_colors, line_alpha)
+        print("\tDone.")
 
 
 def plot_links(net):
-
     _, ax = plt.subplots()
     ax.imshow(net.linkM.astype(float), cmap="gray")

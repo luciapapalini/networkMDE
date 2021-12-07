@@ -194,8 +194,9 @@ PyObject * init_network(PyObject * self, PyObject * args){
     double * values = NULL;
 
     // Take the args and divide them in two pyobjects
+    printf("cnets - Parsing...");fflush(stdout);
     if (!PyArg_ParseTuple(args,"OOi",&Psparse, &Pvalues, &embedding_dim)) Py_RETURN_NONE;
-    printf("cnets - Parsing stage passed\n");
+    printf("\tDone.\n");
 
     long N_elements = (long) PyList_Size(Pvalues);
     long N_links = (long) PyList_Size(Psparse);
@@ -204,21 +205,22 @@ PyObject * init_network(PyObject * self, PyObject * args){
         printf("cnets - invalid network G = (%ld, %ld)\n", N_elements, N_links);
         exit(2);
     }
-    printf("cnets - N_element & N_links stage passed\n");
 
     // Convert each element of the lists into a valid element of the C-object
+    printf("cnets - Converting Py -> C..");fflush(stdout);
     SM = PyList_to_SM(Psparse, N_links);
     values = PyList_to_double(Pvalues, N_elements);
-    printf("cnets - Conversion stage passed\n");
+    printf("\tDone.\n");
 
+    printf("cnets - Generating network...");fflush(stdout);
     G = to_Net(SM, values, N_elements, N_links);
     G.embedding_dimension = embedding_dim;
-    printf("cnets - Network generation stage passed\n");
+    printf("\tDone.\n");
 
     // Initializes the position randomly
-    printf("cnets - Embedding_dimension = %d\n", G.embedding_dimension);
+    printf("cnets - Random initialization in R%d...", G.embedding_dimension); fflush(stdout);
     random_init();
-    printf("cnets - random_init() passed\n");
+    printf("\tDone.\n");
     Py_RETURN_NONE;
 }
 
@@ -235,10 +237,14 @@ double euclidean_distance(double * pos1, double * pos2, int dim){
 void move_away_from_random_not_child(long node, double eps){
     // Picks a guy at random until it is not a child
     long not_child;
+    int draws = 0;
     do{
-        not_child = (long)(G.N_nodes*((float) rand()/RAND_MAX));
+        not_child = (long)((G.N_nodes-1)*((float) rand()/RAND_MAX));
+        draws++;
+        if (draws > G.N_nodes){
+            return;
+        }
     }while(child_local_index_by_child_name(node, not_child) != (long)-1 || node == not_child);
-
     double dist = euclidean_distance(G.nodes[node].position, G.nodes[not_child].position, G.embedding_dimension);
     for (int d = 0; d < G.embedding_dimension; d++)
     {
@@ -253,15 +259,15 @@ void move_away_from_random_not_child(long node, double eps){
 }
 
 PyObject * MDE(PyObject * self, PyObject * args){
-
-    double eps = 0.;
+    double eps = 0., neg_eps = 0.;
     int number_of_steps = 0;
 
-    if (!PyArg_ParseTuple(args, "di", &eps, &number_of_steps))
+    if (!PyArg_ParseTuple(args, "ddi", &eps, &neg_eps, &number_of_steps))
     {
+        printf("cnets - ERROR parsing MDE args\n");
         Py_RETURN_NONE;
     }
-    printf("cnets - starting MDE with eps = %lf, Nsteps = %d\n",eps, number_of_steps);
+    printf("cnets - starting MDE with eps = %lf, neg_eps = %lf, Nsteps = %d\n",eps, neg_eps, number_of_steps);
 
     double actual_distance = 0., factor;
     int child_index;
@@ -281,9 +287,11 @@ PyObject * MDE(PyObject * self, PyObject * args){
                     G.nodes[current_node].position[d] += factor*(G.nodes[child_index].position[d] - G.nodes[current_node].position[d]) ;
                 }
             }
-            for (int mv_aw = 0; mv_aw < (int)(0.10*G.N_nodes); mv_aw++)
-            {
-                move_away_from_random_not_child(current_node, eps/G.N_nodes*5);
+            if (neg_eps != 0.){
+                for (int mv_aw = 0; mv_aw < (int)(0.10*G.N_nodes); mv_aw++)
+                {
+                    move_away_from_random_not_child(current_node, neg_eps);
+                }
             }
         }
     }
@@ -292,6 +300,7 @@ PyObject * MDE(PyObject * self, PyObject * args){
 }
 
 PyObject * get_positions(PyObject * self, PyObject * args){
+    printf("cnets - Passing position back to python..."); fflush(stdout);
     PyObject * list = PyList_New(G.N_nodes);
     for (int n = 0; n < G.N_nodes; n++)
     {
@@ -302,6 +311,7 @@ PyObject * get_positions(PyObject * self, PyObject * args){
         }
         PyList_SetItem(list, n, single);
     }
+    printf("\tDone\n");
     return list;
 }
 

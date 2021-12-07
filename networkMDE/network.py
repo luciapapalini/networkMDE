@@ -262,8 +262,8 @@ class uniNetwork:
             ((self._targetM - self.distanceM) * self.linkM.astype(np.float64)) ** 2
         )
 
-    def cMDE(self,step=0.1, Nsteps=1000):
-        cnets.MDE(step, Nsteps)
+    def cMDE(self,step=0.1,neg_step = 0.001, Nsteps=1000):
+        cnets.MDE(step, neg_step, Nsteps)
         positions = cnets.get_positions()
         for node, position in zip(self, positions):
             node.position = np.array(position)
