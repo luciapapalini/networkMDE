@@ -14,7 +14,7 @@ The conceptual points of greater interest for me are:
 - (even more possibly) **GPU processing**
 - finding an efficient way to **display** the data
 
-![apple_game](assets/random_2d_100undistorted.gif)
+![apple_game](assets/sparse_display.gif)
 ![apple_game](assets/random_2d.gif)
 ![apple_game](assets/random_2d_2.gif) 
 
