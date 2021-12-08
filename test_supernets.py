@@ -24,7 +24,7 @@ class propagateNet(nw.uniNetwork):
     def __init__(self):
         np.random.seed(31121999)
         cnets.set_seed(31121997)
-        self.net = nw.uniNetwork.Random(500, 1)
+        self.net = nw.uniNetwork.Random(470, 1)
         for node in self.net:
             for link in node.synapses:
                 link.length = np.float64(1.) # must be done using numpy types
@@ -32,7 +32,7 @@ class propagateNet(nw.uniNetwork):
         # self.net.nodes[0].value = 11
 
         self.net.initialize_embedding(dim=2)
-        self.net.cMDE(step=0.2, neg_step=0.0, Nsteps=1000)
+        self.net.cMDE(step=0.2, neg_step=0.0, Nsteps=10000)
 
         self.updated_times = 0
         print("Initialization terminated")

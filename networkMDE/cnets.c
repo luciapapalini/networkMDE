@@ -56,37 +56,35 @@ int RAND_INIT = 0;
 void link_nodes(Node * node, long child_index, double distance){
 
     // Adds label of child to child array
-    long * new_childs = (long *) malloc(sizeof(long)*((*node).childs_number + 1));
-    if (new_childs == NULL)
+    // printf("cnets - link_nodes - realloc childs (old = %p)...", node -> childs); fflush(stdout);
+    node -> childs = (long *) realloc(node -> childs, sizeof(long)*( (node -> childs_number) + 1));
+    if (node -> childs == NULL)
     {
         printf("!!! cannot allocate memory !!!\n");
         exit(-1);
     }
-    for (long k = 0; k < (node -> childs_number); k++)
-    {
-        if (node -> childs_number != 0)
-        {
-            new_childs[k] = node->childs[k];
-        }
-    }
-    new_childs[node -> childs_number] = child_index;
-    (*node).childs = new_childs;
+    // printf("assign new child..."); fflush(stdout);
+    (node -> childs)[node -> childs_number] = child_index;
+    // printf("Done.\n");
 
     // Adds distances to distances array
-    double * new_distances = (double *) malloc(sizeof(double)*((*node).childs_number + 1));
-    for (long k = 0; k < node -> childs_number; k++)
+    // printf("cnets - link_nodes - realloc distances..."); fflush(stdout);
+    node -> distances = (double *) realloc(node -> distances, sizeof(double)*((*node).childs_number + 1));
+    if (node -> distances == NULL)
     {
-        new_distances[k] = node->distances[k];
+        printf("!!! cannot allocate memory !!!\n");
+        exit(-1);
     }
-    new_distances[node -> childs_number] = distance;
-    node -> distances = new_distances;
+    // printf("assign new distance..."); fflush(stdout);
+    (node -> distances)[node -> childs_number] = distance;
+    // printf("Done.\n");
 
     node -> childs_number = (node -> childs_number) + 1;
     return ;
 }
 
 Graph to_Net(SparseRow * SM, double * values, long N_elements, long N_links){
-    // printf("cnets - to_Net - ALLOC\n");
+    printf("cnets - to_Net - ALLOC\n");
     Graph g;
     g.nodes = (Node *) malloc(sizeof(Node)*N_elements);
     if (g.nodes == NULL)
@@ -94,23 +92,25 @@ Graph to_Net(SparseRow * SM, double * values, long N_elements, long N_links){
         printf("!!! cannot allocate memory for %ld nodes !!!\n", N_elements);
         exit(-1);
     }
-    // printf("cnets - to_Net - ASSIGN\n");
+    printf("cnets - to_Net - ASSIGN\n");
     // Values assignment
     for (long k = 0; k < N_elements; k++)
     {
         g.nodes[k].n = k;
         g.nodes[k].value = values[k];
         g.nodes[k].childs_number = 0;
+        g.nodes[k].childs = (long *) malloc(sizeof(long)); // Since each node has at least one child
+        g.nodes[k].distances = (double *) malloc(sizeof(double));
     }
 
-    // printf("cnets - to_Net - LINK\n");
+    printf("cnets - to_Net - LINK\n");
     // Linking
     for (long k = 0; k < N_links; k++)
     {
         link_nodes(&(g.nodes[SM[k].i]), SM[k].j, SM[k].d);
         link_nodes(&(g.nodes[SM[k].j]), SM[k].i, SM[k].d);
     }
-    // printf("cnets - to_Net - NEl&NLi\n");
+    printf("cnets - to_Net - NEl&NLi\n");
     g.N_nodes = N_elements;
     g.N_links = N_links;
     return g;
@@ -214,6 +214,8 @@ PyObject * init_network(PyObject * self, PyObject * args){
 
     printf("cnets - Generating network...");fflush(stdout);
     G = to_Net(SM, values, N_elements, N_links);
+    free(SM);
+    free(values);
     G.embedding_dimension = embedding_dim;
     printf("\tDone.\n");
 
