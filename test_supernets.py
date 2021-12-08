@@ -24,17 +24,18 @@ class propagateNet(nw.uniNetwork):
     def __init__(self):
         np.random.seed(31121999)
         cnets.set_seed(31121997)
-        self.net = nw.uniNetwork.Random(470, 1)
+        self.net = nw.uniNetwork.Random(48, 1)
         for node in self.net:
             for link in node.synapses:
-                link.length = np.float64(1.) # must be done using numpy types
+                link.length = np.float32(1.) # must be done using numpy types
         self.net.update_target_matrix()
         # self.net.nodes[0].value = 11
 
         self.net.initialize_embedding(dim=2)
-        self.net.cMDE(step=0.2, neg_step=0.0, Nsteps=10000)
+        # self.net.cMDE(step=0.2, neg_step=0.0, Nsteps=10000)
 
         self.updated_times = 0
+        self.step = 0.1
         print("Initialization terminated")
 
     def apple_game(self):
@@ -59,10 +60,10 @@ class propagateNet(nw.uniNetwork):
                         # link.length *= 1./link.length + p*(1.-1./link.length)   # synapsis enhancement/ distance reduction
                         
                     else:
-                        link.activation = np.float64(0.)
+                        link.activation = np.float32(0.)
         if self.updated_times == 100:
             for link in self.net.links:
-                link.activation = np.float64(0)
+                link.activation = np.float32(0)
 
         self.net.update_target_matrix()
         cnets.set_target(self.net.targetSM)
@@ -70,20 +71,20 @@ class propagateNet(nw.uniNetwork):
         print(colored(f"updated times: {self.updated_times}","blue"))
 
 
-    def update(self, verbose=False):
-        if int(self.updated_times) % 5 == 0:
-            self.apple_game()
-        self.net.cMDE(step=0.01,neg_step=0.0001, Nsteps=50)
+    def update(self):
+        # if int(self.updated_times) % 5 == 0:
+        #     self.apple_game()
+        self.net.cMDE(step=self.step,neg_step=0.0, Nsteps=5)
         self.updated_times += 1
 
 
 A = propagateNet()
 # A.net.print_distanceM()
 netplot.plot_lines = False
-netplot.plot_net(A.net)
+# netplot.plot_net(A.net)
 netplot.scat_kwargs['cmap'] = 'viridis'
-plt.show()
-# animation = netplot.animate_super_network(A, A.update,
-#                                             frames=150, interval=60, blit=False)
-# animation.save('cnetsa.gif',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}', end='\r'), dpi=80)
+# plt.show()
+animation = netplot.animate_super_network(A, A.update,
+                                            frames=200, interval=60, blit=False)
+animation.save('cnetsa.gif',progress_callback = lambda i, n: print(f'Saving frame {i} of {n}', end='\r'), dpi=80)
 # plt.show()

@@ -187,10 +187,10 @@ class uniNetwork:
         print("Linking..                  ", end="\r")
         for i, j, distance in net.targetSM:
 
-            i, j = int(i), int(j)
+            i, j = np.uintc(i), np.uintc(j)
 
             net.add_couple(
-                net.nodes.get(i, Node(i)), net.nodes.get(j, Node(j)), distance
+                net.nodes.get(i, Node(i)), net.nodes.get(j, Node(j)), np.float32(distance)
             )  # connect and add link to set
 
         print(f"Network has {len(net.nodes)} elements and {len(net.links)} links")
@@ -266,7 +266,7 @@ class uniNetwork:
         cnets.MDE(step, neg_step, Nsteps)
         positions = cnets.get_positions()
         for node, position in zip(self, positions):
-            node.position = np.array(position)
+            node.position = np.array(position, dtype=np.float32)
 
     def to_scatter(self):
         return np.array(list(self.nodes.position)).transpose()
@@ -318,7 +318,7 @@ class uniNetwork:
         )
         M = 0.5 * (M + M.transpose())
         np.fill_diagonal(M, 1.0)
-        links = (M < connection_probability).astype(float)
+        links = (M < connection_probability).astype(np.float32)
         M = M * links * max_dist
 
         return uniNetwork.from_adiacence(M)
