@@ -21,6 +21,8 @@ jobs:
 
     steps:
       - checkout
+      - python/install-packages:
+          pkg-manager: pip
       - run:
           command: | 
             sudo pip install pytest
