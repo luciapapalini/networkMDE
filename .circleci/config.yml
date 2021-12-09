@@ -19,7 +19,7 @@ jobs:
       - checkout
       - run: pip install pytest
       - run: ls
-      - run: pytest test
+      - run: pytest tests
 
 workflows:
   build_and_test:
