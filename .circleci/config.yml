@@ -4,17 +4,16 @@ orbs:
   python: circleci/python@1.2
 
 jobs:
-  build:
+  build_and_test:
     docker:
       - image: cimg/python:3.8
     steps:
       - checkout
-      - run: pip install -r requirements.txt
+      - run: pip install pytest -r requirements.txt
       - run: python setup.py install
-      - run: pip install pytest
       - run: pytest tests
 
 workflows:
   build_and_test:
     jobs:
-      - build
+      - build_and_test
