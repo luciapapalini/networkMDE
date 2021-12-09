@@ -12,7 +12,6 @@ jobs:
       # - python/install-packages:
           #  pkg-manager: pip
           # pypi-cache: true
-      - run: sudo apt install pip
       - run: sudo pip install pipenv
       - run: sudo pipenv run python setup.py install
   test:
