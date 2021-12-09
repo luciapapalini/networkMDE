@@ -12,13 +12,18 @@ jobs:
       - python/install-packages:
           args: pytest
           pkg-manager: pip
-          pypi-cache: false
+          pypi-cache: true
+  test:
+    docker:
+      - image: cimg/python:3.8
+    steps:
+      - checkout
+      - run: pytest test
 
 workflows:
   build_and_test:
     jobs:
       - build
-      - python/test:
-          test-tool: pytest
+      - test:
           requires:
             - build
