@@ -9,9 +9,10 @@ jobs:
       - image: cimg/python:3.8
     steps:
       - checkout
-      - python/install-packages:
-          pkg-manager: pip
-          pypi-cache: true
+      # - python/install-packages:
+          #  pkg-manager: pip
+          # pypi-cache: true
+      - run: sudo python setup.py install
   test:
     docker:
       - image: cimg/python:3.8
