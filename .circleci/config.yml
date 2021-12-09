@@ -9,20 +9,14 @@ jobs:
       - image: cimg/python:3.8
     steps:
       - checkout
-      # - python/install-packages:
-          #  pkg-manager: pip
-          # pypi-cache: true
-      - run: pip install pipenv
-      - run: pipenv install
-      - run: pipenv run python setup.py install
+      - run: python setup.py install
   test:
     docker:
       - image: cimg/python:3.8
     steps:
       - checkout
-      - run: pipenv install pytest
       - run: ls
-      - run: pipenv run pytest tests
+      - run: pytest tests
 
 workflows:
   build_and_test:
