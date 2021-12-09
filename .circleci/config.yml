@@ -19,9 +19,9 @@ jobs:
       - image: cimg/python:3.8
     steps:
       - checkout
-      - run: pip install pytest
+      - run: pipenv install pytest
       - run: ls
-      - run: pytest tests
+      - run: pipenv run pytest tests
 
 workflows:
   build_and_test:
