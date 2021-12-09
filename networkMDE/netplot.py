@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib.colors import hsv_to_rgb
 
+plt.rc("font", family='serif')
+
 # Default setttings for plots
 fig_kwargs = {"figsize": (5, 5)}
 scat_kwargs = {"cmap": "viridis", "s": 30, "alpha": 1}
@@ -76,7 +78,7 @@ def update_scatter(ax, net, colors, normalize_colors=True):
     ax.set_ylim((min_, max_))
 
     # colors
-    scat.set_array(np.array(colors))
+    scat.set_array(np.array(list(colors)))
     if normalize_colors:
         vmin, vmax = min(colors), max(colors)
         scat.set_clim(vmin, vmax)
@@ -132,7 +134,7 @@ def animate_super_network(super_net, super_net_function, **anim_kwargs):
     return super_net.net.animation
 
 
-def plot_net(net):
+def plot_net(net, labels=None):
     """Plots a statical image for the network embedding"""
     print("Plot started:")
     print("Getting graphics..", end = '',flush=True)
@@ -153,6 +155,10 @@ def plot_net(net):
         print("Updating lines..", end = '',flush=True)
         update_lines(ax, net, line_colors, line_alpha)
         print("\tDone.")
+    
+    if labels is not None:
+        for node in net:
+            ax.annotate(labels[node.n], tuple(node.position), size=11)
 
 
 def plot_links(net):
