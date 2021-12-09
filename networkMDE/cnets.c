@@ -84,7 +84,7 @@ void link_nodes(Node * node, unsigned int child_index, float distance){
 }
 
 Graph to_Net(SparseRow * SM, float * values, unsigned int N_elements, unsigned long N_links){
-    printf("cnets - to_Net - ALLOC\n");
+    // printf("cnets - to_Net - ALLOC\n");
     Graph g;
     g.nodes = (Node *) malloc(sizeof(Node)*N_elements);
     if (g.nodes == NULL)
@@ -92,7 +92,7 @@ Graph to_Net(SparseRow * SM, float * values, unsigned int N_elements, unsigned l
         printf("!!! cannot allocate memory for %d nodes !!!\n", N_elements);
         exit(-1);
     }
-    printf("cnets - to_Net - ASSIGN\n");
+    // printf("cnets - to_Net - ASSIGN\n");
     // Values assignment
     for (unsigned int k = 0; k < N_elements; k++)
     {
@@ -103,14 +103,14 @@ Graph to_Net(SparseRow * SM, float * values, unsigned int N_elements, unsigned l
         g.nodes[k].distances = (float *) malloc(sizeof(float));
     }
 
-    printf("cnets - to_Net - LINK\n");
+    // printf("cnets - to_Net - LINK\n");
     // Linking
     for (unsigned long k = 0; k < N_links; k++)
     {
         link_nodes(&(g.nodes[SM[k].i]), SM[k].j, SM[k].d);
         link_nodes(&(g.nodes[SM[k].j]), SM[k].i, SM[k].d);
     }
-    printf("cnets - to_Net - NEl&NLi\n");
+    // printf("cnets - to_Net - NEl&NLi\n");
     g.N_nodes = N_elements;
     g.N_links = N_links;
     return g;
@@ -152,12 +152,8 @@ unsigned int child_local_index_by_child_name(unsigned int node_number, unsigned 
             {
                 return child_local_index;
             }
-            if (child_local_index == G.nodes[node_number].childs_number - 1)
-            {
-                // printf("cnets - WARNING - Node %d has not child %d\n", node_number, child_name);
-                return (unsigned int) -1;
-            }
         }
+    return (unsigned int) -1;
 }
 
 void random_init(){
@@ -178,7 +174,7 @@ void random_init(){
             G.nodes[n].position[d] = ((float) rand())/((float) RAND_MAX);
         }
     }
-
+    return;
 }
 
 // Python enters here first 90% of the time
@@ -320,7 +316,7 @@ PyObject * get_positions(PyObject * self, PyObject * args){
 PyObject * get_distanceSM(PyObject * self, PyObject * args)
 {
 
-    PyObject * distanceSM = PyList_New(G.N_nodes*G.N_nodes);
+    PyObject * distanceSM = PyList_New(G.N_nodes*G.N_nodes); // Mmmh, not so clever! N**2 - > 9*N**2
     float d;
     long row_index = 0;
     Node node, another_node;
@@ -345,6 +341,52 @@ PyObject * get_distanceSM(PyObject * self, PyObject * args)
         
     }
     return distanceSM;
+}
+
+PyObject * matrix_to_list_of_list(float **mat, unsigned int N)
+{
+    /* Returns a matrix as list of lists (lol).
+        Waiting to implement numpy arrays. */
+    PyObject * lol = PyList_New(G.N_nodes);
+
+    for (unsigned int i = 0; i < N; i++)
+    {   
+        PyObject * i_th_row = PyList_New(N);
+        for (unsigned int j = 0; j < N; j++)
+        {   
+            PyList_SetItem(i_th_row, j , PyFloat_FromDouble((double) mat[i][j]));
+        }
+        PyList_SetItem(lol, i , i_th_row);  
+    }
+    return lol;
+}
+
+PyObject * get_distanceM(PyObject * self, PyObject * args)
+{
+    printf("cnets - getting distances...");fflush(stdout);
+    /* Returns a matrix of distances as list of lists.
+        Waiting to implement numpy arrays. */
+    float ** distanceM = (float**) malloc(sizeof(float*)*G.N_nodes);
+    for (unsigned int k=0; k< G.N_nodes; k ++)
+    {
+        distanceM[k] = (float*) malloc(sizeof(float)*G.N_nodes);
+    }
+    float d;
+    Node node, another_node;
+
+    for (unsigned int node_index = 0; node_index < G.N_nodes; node_index++)
+    {   
+        for (unsigned int another_node_index = node_index; another_node_index < G.N_nodes; another_node_index++)
+        {   
+            node = G.nodes[node_index];
+            another_node = G.nodes[another_node_index];
+            d = euclidean_distance(node.position, another_node.position, G.embedding_dimension);
+            distanceM[node_index][another_node_index] = d;
+            distanceM[another_node_index][node_index] = d;
+        }        
+    }
+    printf("Done.\n");
+    return matrix_to_list_of_list(distanceM, G.N_nodes);
 }
 
 PyObject * set_target(PyObject * self, PyObject * args)
@@ -389,6 +431,7 @@ static PyMethodDef cnetsMethods[] = {
     {"MDE", MDE, METH_VARARGS, "Executes minumum distortion embedding routine"},
     {"get_positions", get_positions, METH_VARARGS, "Gives the computed positions of the network"},
     {"get_distanceSM", get_distanceSM, METH_VARARGS, "Returns the computed distance sparse matrix"},
+    {"get_distanceM", get_distanceM, METH_VARARGS,"Returns the distance matrix"},
     {"set_target", set_target, METH_VARARGS,"sets the target sparse matrix"},
     {"set_seed", set_seed, METH_VARARGS, "Set the seed for random numbers"},
     {NULL, NULL, 0, NULL}//Guardian of The Table
