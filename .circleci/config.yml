@@ -11,11 +11,6 @@ jobs:
       - checkout
       - run: pip install -r requirements.txt
       - run: python setup.py install
-  test:
-    docker:
-      - image: cimg/python:3.8
-    steps:
-      - checkout
       - run: pip install pytest
       - run: pytest tests
 
@@ -23,6 +18,3 @@ workflows:
   build_and_test:
     jobs:
       - build
-      - test:
-          requires:
-            - build
