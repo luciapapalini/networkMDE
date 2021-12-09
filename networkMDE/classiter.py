@@ -66,6 +66,12 @@ class citer:
 
     def __len__(self):
         return len(self.objs)
+    
+    def __eq__(self, other):
+        return (self.objs == other.objs)
+    
+    def __call__(self, *args, **kwargs):
+        return clist([obj(*args, **kwargs) for obj in self.objs])
 
 
 class clist(citer):
@@ -77,6 +83,7 @@ class clist(citer):
         super().__init__(objs)
 
     def __iadd__(self, element):
+        self.type = type(element)
         self.objs.append(element)
         return self
 
@@ -89,9 +96,6 @@ class clist(citer):
 
     def __list__(self):
         return self.objs
-
-    def __call__(self, *args, **kwargs):
-        return clist([obj(*args, **kwargs) for obj in self.objs])
 
 
 class cdict(citer):
@@ -133,6 +137,9 @@ class cdict(citer):
 
     def __next__(self):
         return next(self.objs.values())
+    
+    def __call__(self, *args, **kwargs):
+        return clist([obj(*args, **kwargs) for obj in self.objs.values()])
 
 
 class cset(citer):

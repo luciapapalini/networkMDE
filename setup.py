@@ -4,10 +4,12 @@ with open('requirements.txt', 'r') as reqfile:
     dependencies = reqfile.readlines()
 
 def main():
-    setup(name="cnets",
+    setup(name="networkMDE",
           version="1.0.0",
-          description="C module for network computing",
+          packages=["networkMDE"],
+          description="Module for network computing",
           author="djanloo",
+          author_email='becuzzigianluca@gmail.com',
           ext_modules=[Extension("cnets", ["networkMDE/cnets.c", "networkMDE/cutils.c"])],
           install_requires=dependencies)
 
