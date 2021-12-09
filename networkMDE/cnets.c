@@ -16,19 +16,19 @@ Network must be given in normalized mode:
 
 typedef struct sparserow
 {
-    long i;
-    long j;
-    double d;
+    unsigned int i;
+    unsigned int j;
+    float d;
 } SparseRow;
 
 typedef struct node
 {
-    long n;   // Node label
-    double value;       // Value of a general scalar quantity
-    long childs_number;
-    long * childs;
-    double * distances;
-    double * position; // Position in the embedding
+    unsigned int n;   // Node label
+    float value;       // Value of a general scalar quantity
+    unsigned int childs_number;
+    unsigned int * childs;
+    float * distances;
+    float * position; // Position in the embedding
 } Node;
 
 // Link structure is useless at the moment,
@@ -37,15 +37,15 @@ typedef struct link
 {
     Node * node1;
     Node * node2;
-    double distance;
+    float distance;
 } Link;
 
 typedef struct graph
 {
-    long N_nodes;
-    long N_links;
+    unsigned int N_nodes;
+    unsigned long N_links;
     Node * nodes;
-    int embedding_dimension;
+    unsigned int embedding_dimension;
 } Graph;
 
 // Global variables remain the same call after call
@@ -53,83 +53,83 @@ Graph G;
 int RAND_INIT = 0;
 
 // Link nodes in the Graph
-void link_nodes(Node * node, long child_index, double distance){
+void link_nodes(Node * node, unsigned int child_index, float distance){
 
     // Adds label of child to child array
-    long * new_childs = (long *) malloc(sizeof(long)*((*node).childs_number + 1));
-    if (new_childs == NULL)
+    // printf("cnets - link_nodes - realloc childs (old = %p)...", node -> childs); fflush(stdout);
+    node -> childs = (unsigned int *) realloc(node -> childs, sizeof(unsigned int)*( (node -> childs_number) + 1));
+    if (node -> childs == NULL)
     {
         printf("!!! cannot allocate memory !!!\n");
         exit(-1);
     }
-    for (long k = 0; k < (node -> childs_number); k++)
-    {
-        if (node -> childs_number != 0)
-        {
-            new_childs[k] = node->childs[k];
-        }
-    }
-    new_childs[node -> childs_number] = child_index;
-    (*node).childs = new_childs;
+    // printf("assign new child..."); fflush(stdout);
+    (node -> childs)[node -> childs_number] = child_index;
+    // printf("Done.\n");
 
     // Adds distances to distances array
-    double * new_distances = (double *) malloc(sizeof(double)*((*node).childs_number + 1));
-    for (long k = 0; k < node -> childs_number; k++)
+    // printf("cnets - link_nodes - realloc distances..."); fflush(stdout);
+    node -> distances = (float *) realloc(node -> distances, sizeof(float)*((*node).childs_number + 1));
+    if (node -> distances == NULL)
     {
-        new_distances[k] = node->distances[k];
+        printf("!!! cannot allocate memory !!!\n");
+        exit(-1);
     }
-    new_distances[node -> childs_number] = distance;
-    node -> distances = new_distances;
+    // printf("assign new distance..."); fflush(stdout);
+    (node -> distances)[node -> childs_number] = distance;
+    // printf("Done.\n");
 
     node -> childs_number = (node -> childs_number) + 1;
     return ;
 }
 
-Graph to_Net(SparseRow * SM, double * values, long N_elements, long N_links){
-    // printf("cnets - to_Net - ALLOC\n");
+Graph to_Net(SparseRow * SM, float * values, unsigned int N_elements, unsigned long N_links){
+    printf("cnets - to_Net - ALLOC\n");
     Graph g;
     g.nodes = (Node *) malloc(sizeof(Node)*N_elements);
     if (g.nodes == NULL)
     {
-        printf("!!! cannot allocate memory for %ld nodes !!!\n", N_elements);
+        printf("!!! cannot allocate memory for %d nodes !!!\n", N_elements);
         exit(-1);
     }
-    // printf("cnets - to_Net - ASSIGN\n");
+    printf("cnets - to_Net - ASSIGN\n");
     // Values assignment
-    for (long k = 0; k < N_elements; k++)
+    for (unsigned int k = 0; k < N_elements; k++)
     {
         g.nodes[k].n = k;
         g.nodes[k].value = values[k];
         g.nodes[k].childs_number = 0;
+        g.nodes[k].childs = (unsigned int *) malloc(sizeof(unsigned int)); // Since each node has at least one child
+        g.nodes[k].distances = (float *) malloc(sizeof(float));
     }
 
-    // printf("cnets - to_Net - LINK\n");
+    printf("cnets - to_Net - LINK\n");
     // Linking
-    for (long k = 0; k < N_links; k++)
+    for (unsigned long k = 0; k < N_links; k++)
     {
         link_nodes(&(g.nodes[SM[k].i]), SM[k].j, SM[k].d);
         link_nodes(&(g.nodes[SM[k].j]), SM[k].i, SM[k].d);
     }
-    // printf("cnets - to_Net - NEl&NLi\n");
+    printf("cnets - to_Net - NEl&NLi\n");
     g.N_nodes = N_elements;
     g.N_links = N_links;
     return g;
 }
 
-double * PyList_to_double(PyObject * Pylist, long N_elements){
+float * PyList_to_double(PyObject * Pylist, unsigned int N_elements){
 
-    double * dlist = (double *) malloc(sizeof(double)*N_elements);
-    for (long i = 0; i < N_elements; i++)
+    float * dlist = (float *) malloc(sizeof(float)*N_elements);
+    for (unsigned int i = 0; i < N_elements; i++)
     {
-        dlist[i] = PyFloat_AS_DOUBLE(PyList_GetItem(Pylist, i));
+        dlist[i] = (float) PyFloat_AS_DOUBLE(PyList_GetItem(Pylist, i));
     }
     return dlist;
 }
 
-SparseRow * PyList_to_SM(PyObject * list, long N_links){
+SparseRow * PyList_to_SM(PyObject * list, unsigned long N_links){
 
     SparseRow * SM = (SparseRow *) malloc(sizeof(SparseRow)*N_links);
-    for (long k = 0; k < N_links;k++)
+    for (unsigned long k = 0; k < N_links;k++)
     {
         PyObject * row = PyList_GetItem(list,k);
         if (!PyList_Check(row))
@@ -137,16 +137,16 @@ SparseRow * PyList_to_SM(PyObject * list, long N_links){
             printf("Invalid sparse list (row %li)\n", k);
             return NULL;
     }
-    SM[k].i = PyLong_AsLong(PyList_GetItem(row,0));
-    SM[k].j = PyLong_AsLong(PyList_GetItem(row,1));
-    SM[k].d = PyFloat_AsDouble(PyList_GetItem(row,2));
+    SM[k].i = (unsigned int) PyLong_AsLong(PyList_GetItem(row,0));
+    SM[k].j = (unsigned int) PyLong_AsLong(PyList_GetItem(row,1));
+    SM[k].d = (unsigned int) PyFloat_AsDouble(PyList_GetItem(row,2));
     }
     return SM;
 }
 
-long child_local_index_by_child_name(long node_number, long child_name)
+unsigned int child_local_index_by_child_name(unsigned int node_number, unsigned int child_name)
 {
-    for (int child_local_index = 0; child_local_index < G.nodes[node_number].childs_number; child_local_index++)
+    for (unsigned int child_local_index = 0; child_local_index < G.nodes[node_number].childs_number; child_local_index++)
         {
             if (G.nodes[node_number].childs[child_local_index] == child_name)
             {
@@ -154,8 +154,8 @@ long child_local_index_by_child_name(long node_number, long child_name)
             }
             if (child_local_index == G.nodes[node_number].childs_number - 1)
             {
-                // printf("cnets - WARNING - Node %li has not child %li\n", node_number, child_name);
-                return (long) -1;
+                // printf("cnets - WARNING - Node %d has not child %d\n", node_number, child_name);
+                return (unsigned int) -1;
             }
         }
 }
@@ -170,10 +170,10 @@ void random_init(){
         srand(RAND_INIT);
     }
 
-    for (int n = 0; n < G.N_nodes; n++)
+    for (unsigned int n = 0; n < G.N_nodes; n++)
     {
-        G.nodes[n].position = (double *) malloc(sizeof(double)*G.embedding_dimension);
-        for (int d = 0; d < G.embedding_dimension; d++)
+        G.nodes[n].position = (float *) malloc(sizeof(float)*G.embedding_dimension);
+        for (unsigned int d = 0; d < G.embedding_dimension; d++)
         {
             G.nodes[n].position[d] = ((float) rand())/((float) RAND_MAX);
         }
@@ -187,65 +187,73 @@ PyObject * init_network(PyObject * self, PyObject * args){
     // The PyObjs for the two lists
     PyObject * Psparse = NULL;
     PyObject * Pvalues = NULL;
-    int embedding_dim = 0;
+    unsigned int embedding_dim = 0;
 
     // The C sparse matrix and the values array
     SparseRow * SM = NULL;
-    double * values = NULL;
+    float * values = NULL;
 
     // Take the args and divide them in two pyobjects
+    printf("cnets - Parsing...");fflush(stdout);
     if (!PyArg_ParseTuple(args,"OOi",&Psparse, &Pvalues, &embedding_dim)) Py_RETURN_NONE;
-    printf("cnets - Parsing stage passed\n");
+    printf("\tDone.\n");
 
-    long N_elements = (long) PyList_Size(Pvalues);
-    long N_links = (long) PyList_Size(Psparse);
+    unsigned int N_elements = (unsigned int) PyList_Size(Pvalues);
+    unsigned long N_links = (unsigned long) PyList_Size(Psparse);
     if (N_links < 1 ||  N_elements < 2)
     {
-        printf("cnets - invalid network G = (%ld, %ld)\n", N_elements, N_links);
+        printf("cnets - invalid network G = (%d, %ld)\n", N_elements, N_links);
         exit(2);
     }
-    printf("cnets - N_element & N_links stage passed\n");
 
     // Convert each element of the lists into a valid element of the C-object
+    printf("cnets - Converting Py -> C..");fflush(stdout);
     SM = PyList_to_SM(Psparse, N_links);
     values = PyList_to_double(Pvalues, N_elements);
-    printf("cnets - Conversion stage passed\n");
+    printf("\tDone.\n");
 
+    printf("cnets - Generating network...");fflush(stdout);
     G = to_Net(SM, values, N_elements, N_links);
+    free(SM);
+    free(values);
     G.embedding_dimension = embedding_dim;
-    printf("cnets - Network generation stage passed\n");
+    printf("\tDone.\n");
 
     // Initializes the position randomly
-    printf("cnets - Embedding_dimension = %d\n", G.embedding_dimension);
+    printf("cnets - Random initialization in R%d...", G.embedding_dimension); fflush(stdout);
     random_init();
-    printf("cnets - random_init() passed\n");
+    printf("\tDone.\n");
     Py_RETURN_NONE;
 }
 
-double euclidean_distance(double * pos1, double * pos2, int dim){
+float euclidean_distance(float * pos1, float * pos2, unsigned int dim){
 
-    double dist = 0.;
-    for (int i = 0; i < dim; i++)
+    float dist = 0.;
+    for (unsigned int i = 0; i < dim; i++)
     {
         dist += pow(pos1[i] - pos2[i], 2);
     }
     return sqrt(dist);
 }
 
-void move_away_from_random_not_child(long node, double eps){
+void move_away_from_random_not_child(unsigned int node, float eps){
     // Picks a guy at random until it is not a child
-    long not_child;
+    unsigned int not_child;
+    unsigned int draws = 0;
     do{
-        not_child = (long)(G.N_nodes*((float) rand()/RAND_MAX));
-    }while(child_local_index_by_child_name(node, not_child) != (long)-1 || node == not_child);
-
-    double dist = euclidean_distance(G.nodes[node].position, G.nodes[not_child].position, G.embedding_dimension);
-    for (int d = 0; d < G.embedding_dimension; d++)
+        not_child = (unsigned int)((G.N_nodes-1)*((float) rand()/RAND_MAX));
+        draws++;
+        if (draws > G.N_nodes){
+            return;
+        }
+    }while(child_local_index_by_child_name(node, not_child) != (unsigned int)-1 || node == not_child);
+    float dist = euclidean_distance(G.nodes[node].position, G.nodes[not_child].position, G.embedding_dimension);
+    for (unsigned int d = 0; d < G.embedding_dimension; d++)
     {
         G.nodes[node].position[d] += eps/(dist*dist)*(G.nodes[node].position[d] - G.nodes[not_child].position[d]);
         if (G.nodes[node].position[d] != G.nodes[node].position[d]){
             printf("NAN detected\n");
-            printf("%li- %li --> %lf\n", node, not_child, dist);
+            printf("%d- %d --> %lf\n", node, not_child, dist);
             exit(5);
         }
     }
@@ -253,37 +261,39 @@ void move_away_from_random_not_child(long node, double eps){
 }
 
 PyObject * MDE(PyObject * self, PyObject * args){
+    float eps = 0., neg_eps = 0.;
+    unsigned int number_of_steps = 0;
 
-    double eps = 0.;
-    int number_of_steps = 0;
-
-    if (!PyArg_ParseTuple(args, "di", &eps, &number_of_steps))
+    if (!PyArg_ParseTuple(args, "ffi", &eps, &neg_eps, &number_of_steps))
     {
+        printf("cnets - ERROR parsing MDE args\n");
         Py_RETURN_NONE;
     }
-    printf("cnets - starting MDE with eps = %lf, Nsteps = %d\n",eps, number_of_steps);
+    printf("cnets - starting MDE with eps = %lf, neg_eps = %lf, Nsteps = %d\n",eps, neg_eps, number_of_steps);
 
-    double actual_distance = 0., factor;
-    int child_index;
-    for (int i = 0; i < number_of_steps; i++)
+    float actual_distance = 0., factor;
+    unsigned int child_index;
+    for (unsigned int i = 0; i < number_of_steps; i++)
     {   
         progress_bar(((float)i)/( (float) number_of_steps) , 60);
-        for (int current_node = 0; current_node < G.N_nodes; current_node++)
+        for (unsigned int current_node = 0; current_node < G.N_nodes; current_node++)
         {
-            for (int current_child = 0; current_child < G.nodes[current_node].childs_number; current_child++ )
+            for (unsigned int current_child = 0; current_child < G.nodes[current_node].childs_number; current_child++ )
             {
                 child_index = G.nodes[current_node].childs[current_child];
                 actual_distance = euclidean_distance(G.nodes[current_node].position, G.nodes[child_index].position, G.embedding_dimension);                
                 factor = eps*(1.- G.nodes[current_node].distances[current_child]/actual_distance)/G.nodes[current_node].childs_number;
                 
-                for (int d = 0; d < G.embedding_dimension; d++)
+                for (unsigned int d = 0; d < G.embedding_dimension; d++)
                 {
                     G.nodes[current_node].position[d] += factor*(G.nodes[child_index].position[d] - G.nodes[current_node].position[d]) ;
                 }
             }
-            for (int mv_aw = 0; mv_aw < (int)(0.10*G.N_nodes); mv_aw++)
-            {
-                move_away_from_random_not_child(current_node, eps/G.N_nodes*5);
+            if (neg_eps != 0.){
+                for (unsigned int mv_aw = 0; mv_aw < (unsigned int)(0.10*G.N_nodes); mv_aw++)
+                {
+                    move_away_from_random_not_child(current_node, neg_eps);
+                }
             }
         }
     }
@@ -292,16 +302,18 @@ PyObject * MDE(PyObject * self, PyObject * args){
 }
 
 PyObject * get_positions(PyObject * self, PyObject * args){
+    printf("cnets - Passing position back to python..."); fflush(stdout);
     PyObject * list = PyList_New(G.N_nodes);
-    for (int n = 0; n < G.N_nodes; n++)
+    for (unsigned int n = 0; n < G.N_nodes; n++)
     {
         PyObject * single = PyList_New(G.embedding_dimension);
-        for (int d = 0; d < G.embedding_dimension; d++)
+        for (unsigned int d = 0; d < G.embedding_dimension; d++)
         {
             PyList_SetItem(single, d, PyFloat_FromDouble(G.nodes[n].position[d]));
         }
         PyList_SetItem(list, n, single);
     }
+    printf("\tDone\n");
     return list;
 }
 
@@ -309,13 +321,13 @@ PyObject * get_distanceSM(PyObject * self, PyObject * args)
 {
 
     PyObject * distanceSM = PyList_New(G.N_nodes*G.N_nodes);
-    double d;
-    int row_index = 0;
+    float d;
+    long row_index = 0;
     Node node, another_node;
 
-    for (int node_index = 0; node_index < G.N_nodes; node_index++)
+    for (unsigned int node_index = 0; node_index < G.N_nodes; node_index++)
     {   
-        for (int another_node_index = 0; another_node_index < G.N_nodes; another_node_index++)
+        for (unsigned int another_node_index = 0; another_node_index < G.N_nodes; another_node_index++)
         {   
             PyObject * row = PyList_New(3);
 
@@ -339,18 +351,18 @@ PyObject * set_target(PyObject * self, PyObject * args)
 {
     // printf("cnets - updating target distances\n");
     PyObject * PySM;
-    long node1_number, node2_number;
+    unsigned int node1_number, node2_number;
 
     if(! PyArg_ParseTuple(args, "O", &PySM))
     {
         printf("cnets - set_target: paring failed\n");
     }
     SparseRow * SM = PyList_to_SM(PySM, G.N_links);
-    for (int link = 0; link < G.N_links; link++)
+    for (unsigned long link = 0; link < G.N_links; link++)
     {
         node1_number = SM[link].i;
         node2_number = SM[link].j;
-        // printf("cnet - set_target - (row %d of SM) --> (%li, %li) was (%lf), now is (%lf)\n", link, node1_number,node2_number, G.nodes[node1_number].distances[child_local_index_by_child_name(node1_number, node2_number)] , SM[link].d);
+        // printf("cnet - set_target - (row %d of SM) --> (%d, %d) was (%lf), now is (%lf)\n", link, node1_number,node2_number, G.nodes[node1_number].distances[child_local_index_by_child_name(node1_number, node2_number)] , SM[link].d);
         
         G.nodes[node1_number].distances[child_local_index_by_child_name(node1_number, node2_number)] = SM[link].d;
         G.nodes[node2_number].distances[child_local_index_by_child_name(node2_number, node1_number)] = SM[link].d;
