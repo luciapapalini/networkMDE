@@ -20,3 +20,5 @@ workflows:
       - build
       - python/test:
           test-tool: pytest
+          requires:
+            - build
