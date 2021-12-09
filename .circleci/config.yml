@@ -13,6 +13,7 @@ jobs:
           #  pkg-manager: pip
           # pypi-cache: true
       - run: pip install pipenv
+      - run: pipenv install
       - run: pipenv run python setup.py install
   test:
     docker:
