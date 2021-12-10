@@ -101,7 +101,7 @@ class uniLink:
     def __hash__(self):
         """Symmetric hash function for equivalence relation"""
         h1, h2 = hash(self.node1), hash(self.node2)
-        return hash((h1+h2, abs(h1-h2)))
+        return hash((h1 + h2, abs(h1 - h2)))
 
     def __str__(self):
         return f"uL({self.node1.n}<->{self.node2.n}:{self.length:1.2f})"
@@ -175,10 +175,14 @@ class uniNetwork:
             i, j = np.uintc(i), np.uintc(j)
 
             net.add_couple(
-                net.nodes.get(i, Node(i)), net.nodes.get(j, Node(j)), np.float32(distance)
+                net.nodes.get(i, Node(i)),
+                net.nodes.get(j, Node(j)),
+                np.float32(distance),
             )  # connect and add link to set
 
-        print(f"Network has {len(net.nodes)} elements and {len(net.links)} links (density = {200*len(net.links)/(len(net.nodes)**2 - len(net.nodes) ): .1f} %)")
+        print(
+            f"Network has {len(net.nodes)} elements and {len(net.links)} links (density = {200*len(net.links)/(len(net.nodes)**2 - len(net.nodes) ): .1f} %)"
+        )
         return net
 
     @classmethod
@@ -247,7 +251,7 @@ class uniNetwork:
             ((self._targetM - self.distanceM) * self.linkM.astype(np.float64)) ** 2
         )
 
-    def cMDE(self,step=0.1,neg_step = 0.001, Nsteps=1000):
+    def cMDE(self, step=0.1, neg_step=0.001, Nsteps=1000):
         cnets.MDE(step, neg_step, Nsteps)
         positions = cnets.get_positions()
         for node, position in zip(self, positions):

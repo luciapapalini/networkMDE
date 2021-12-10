@@ -26,7 +26,7 @@ class citer:
         self.objs = objs if objs is not None else self.empty
 
         self._type = None
-        if hasattr(objs, '__iter__'):
+        if hasattr(objs, "__iter__"):
             for obj in objs:
                 self.type = type(obj)
 
@@ -43,7 +43,9 @@ class citer:
         if self._type is None or set_type == self._type:
             self._type = set_type
         else:
-            raise TypeError(f"clist type is already set to {self._type} (requested switch to {set_type})")
+            raise TypeError(
+                f"clist type is already set to {self._type} (requested switch to {set_type})"
+            )
 
     def __setitem__(self, key, value):
         self.objs[key] = value
@@ -66,10 +68,10 @@ class citer:
 
     def __len__(self):
         return len(self.objs)
-    
+
     def __eq__(self, other):
-        return (self.objs == other.objs)
-    
+        return self.objs == other.objs
+
     def __call__(self, *args, **kwargs):
         return clist([obj(*args, **kwargs) for obj in self.objs])
 
@@ -137,7 +139,7 @@ class cdict(citer):
 
     def __next__(self):
         return next(self.objs.values())
-    
+
     def __call__(self, *args, **kwargs):
         return clist([obj(*args, **kwargs) for obj in self.objs.values()])
 

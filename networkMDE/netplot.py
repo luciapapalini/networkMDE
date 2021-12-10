@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib.colors import hsv_to_rgb
 
-plt.rc("font", family='serif')
+plt.rc("font", family="serif")
 
 # Default setttings for plots
 fig_kwargs = {"figsize": (5, 5)}
@@ -119,8 +119,8 @@ def animate_super_network(super_net, super_net_function, **anim_kwargs):
         activations = super_net.net.links.activation
 
         point_colors = super_net.net.nodes.value
-        line_colors = np.array([hsv_to_rgb((.25, 1.0, a)) for a in activations])
-        line_alpha = [0.2 + 0.8*a for a in activations]
+        line_colors = np.array([hsv_to_rgb((0.25, 1.0, a)) for a in activations])
+        line_alpha = [0.2 + 0.8 * a for a in activations]
 
         update_scatter(ax, super_net.net, point_colors)
         if plot_lines:
@@ -137,7 +137,7 @@ def animate_super_network(super_net, super_net_function, **anim_kwargs):
 def plot_net(net, labels=None):
     """Plots a statical image for the network embedding"""
     print("Plot started:")
-    print("Getting graphics..", end = '',flush=True)
+    print("Getting graphics..", end="", flush=True)
     _, ax = get_graphics(net)
     print("\tDone.")
 
@@ -145,17 +145,19 @@ def plot_net(net, labels=None):
 
     point_colors = net.nodes.value
     line_colors = np.array([hsv_to_rgb((0.0, 1.0, a)) for a in activations])
-    line_alpha = [0.2 + 0.8*a for a in activations]  # [0.2 + 0.8 * a for a in activations]
+    line_alpha = [
+        0.2 + 0.8 * a for a in activations
+    ]  # [0.2 + 0.8 * a for a in activations]
 
-    print("Updating scatter..", end = '',flush=True)
+    print("Updating scatter..", end="", flush=True)
     update_scatter(ax, net, point_colors)
     print("\tDone.")
 
     if plot_lines:
-        print("Updating lines..", end = '',flush=True)
+        print("Updating lines..", end="", flush=True)
         update_lines(ax, net, line_colors, line_alpha)
         print("\tDone.")
-    
+
     if labels is not None:
         for node in net:
             ax.annotate(labels[node.n], tuple(node.position), size=11)
