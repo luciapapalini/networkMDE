@@ -99,24 +99,9 @@ class uniLink:
         return not self.__eq__(other)
 
     def __hash__(self):
-        """Hash function for dicts and sets.
-
-        The function must be symmetric w.r.t. nodes, a possible choice is:
-
-            h(uniLink) = c ( h(node1)  + h(node2) )
-
-        where c is a constant.
-
-        Since h(node) = node.n (integer) the number of collision is:
-
-            N_coll = n1 + n2 + 1
-
-        To avoid this the constant c is chosen like:
-
-            c = 1/(1 + h1**2 )* 1/(1 + h2**2)
-        """
+        """Symmetric hash function for equivalence relation"""
         h1, h2 = hash(self.node1), hash(self.node2)
-        return hash((h1 + h2) / (h1 ** 2 + 1) / (h2 ** 2 + 1))
+        return hash((h1+h2, abs(h1-h2)))
 
     def __str__(self):
         return f"uL({self.node1.n}<->{self.node2.n}:{self.length:1.2f})"
@@ -193,7 +178,7 @@ class uniNetwork:
                 net.nodes.get(i, Node(i)), net.nodes.get(j, Node(j)), np.float32(distance)
             )  # connect and add link to set
 
-        print(f"Network has {len(net.nodes)} elements and {len(net.links)} links")
+        print(f"Network has {len(net.nodes)} elements and {len(net.links)} links (density = {200*len(net.links)/(len(net.nodes)**2 - len(net.nodes) ): .1f} %)")
         return net
 
     @classmethod

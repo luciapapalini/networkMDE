@@ -54,7 +54,7 @@ class citer:
     def __str__(self):
         desc = f"{self.__class__.citer_name} of {str(self.type)} ["
         for obj in self.objs:
-            desc += f" {str(obj)} "
+            desc += f" {str(obj)} \n"
         desc += "]"
         return desc
 
