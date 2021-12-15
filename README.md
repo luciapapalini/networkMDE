@@ -1,5 +1,7 @@
 # networkMDE 
 
+This stuff sucks <3 <3
+
 [![djanloo](https://circleci.com/gh/djanloo/networkMDE.svg?style=svg)](https://app.circleci.com/pipelines/github/djanloo/networkMDE)
 
 This repository aims to implement some **network embedding algorithms** (MDE, t-SNE, UMAP) for dimensionality reduction and other networks-related stuff (processes over networks, maybe also _leaky integrate-and-fire_ for SNN in future, assuming my dexterity is sufficient).
